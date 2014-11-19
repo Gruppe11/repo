@@ -22,7 +22,7 @@
 #define GAMEKINDNAME "NMMOrris"
 #define PORTNUMBER 1357
 #define HOSTNAME "sysprak.priv.lab.nm.ifi.lmu.de"
-#define VERSION 1.42 //Welche Version hat der Server? Kriege keine Verbindung.
+#define VERSION "1.42" //Welche Version hat der Server? Kriege keine Verbindung.
 
 
 
@@ -41,15 +41,8 @@ int main(int argc, char *argv[]) {
     printf("Game-ID nicht 11-stellig.\n");
   }
 
-  // Pipe erstellen und überprüfen
+  // Pipe erstellen
   int fd[2];
-
-  if (pipe(fd) < 0) {
-    perror("\nFehler beim Erstellen der Pipe.\n");
-    return EXIT_FAILURE;
-  }
-
-
 
   /* Verbindung zu Gameserver aufbauen */
 
