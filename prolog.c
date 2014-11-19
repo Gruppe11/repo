@@ -10,7 +10,7 @@
 #include "performConnection.h"
 
 
-/*
+/**
  * Implementierung der ersten Protokollphase der
  * Kommunikation mit dem Gameserver
  *
@@ -22,6 +22,7 @@
 #define GAMEKINDNAME "NMMOrris"
 #define PORTNUMBER 1357
 #define HOSTNAME "sysprak.priv.lab.nm.ifi.lmu.de"
+#define VERSION 1.42 //Welche Version hat der Server? Kriege keine Verbindung.
 
 
 
@@ -59,7 +60,7 @@ int main(int argc, char *argv[]) {
   // Hostname in IP Adresse übersetzen
   struct hostent* ip = gethostbyname(HOSTNAME);
   if (ip == NULL) {
-    perror("\nFehler beim Anfordern der IP");
+    perror("\nFehler beim Anfordern der IP.\n");
   }
 
   // Benötigte Variablen der Struktur Host Werte zuweisen
@@ -69,14 +70,14 @@ int main(int argc, char *argv[]) {
 
   // Verbindung aufbauen und überprüfen
   if (connect(sock, (struct sockaddr*) &host, sizeof(host)) == 0) {
-    printf("\nVerbindung hergestellt!");
+    printf("\nVerbindung hergestellt!\n");
   }else{
-    perror("\nFehler beim Verbindungsaufbau");
+    perror("\nFehler beim Verbindungsaufbau.\n");
     return EXIT_FAILURE;
   }
 
   // Prologphase der Kommunikation mit dem Server durchführen und testen
-  if (performConnection(sock, ip, host, game_id, fd) != 0) {
+  if (performConnection(sock, VERSION, game_id, fd) != 0) {
     close(sock);
     return EXIT_FAILURE;
   }
