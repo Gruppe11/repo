@@ -50,6 +50,7 @@ int performConnection(int sock, char* version, char* game_id, int fd[]){
   char* temp = malloc(sizeof(char) * BUFFR);
   char* buffer = malloc(sizeof(char) * BUFFR);
 
+  //Schleife um die Nachricht vom Server vollständig im reader zu haben (leider erfolglos)
   do
 	{	
 		err = recv(sock, buffer, BUFFR - 1, 0);
@@ -61,11 +62,11 @@ int performConnection(int sock, char* version, char* game_id, int fd[]){
 		printf("%c\n", buffer[err - 1]);
 	}while(buffer[err - 1] != '\n');
 
-	printf("%c\n", buffer[0]);
+	printf("%c\n", buffer[0]); //Zur Kontrolle 
     
   strcpy(reader, buffer);
-	printf("Rückgabewert von recv: %i. Komisch oder?\n", err);
-	printf("Reader: %s\n", reader);
+	printf("Rückgabewert von recv: %i. Komisch oder?\n", err); //Zur Kontrolle
+	printf("Reader: %s\n", reader); //Zur Kontrolle
 	
 	
 	return 0;
