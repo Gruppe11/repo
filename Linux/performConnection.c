@@ -147,7 +147,7 @@ int performConnection(int sock, char* version, char* game_id, int fd[]){
 				break;
 			case 4:
 				printf("Case 4 wurde durchlaufen.\n");
-				/*Da das recv vom Server etwas unberechenbar ist, steht 				 *im Case 4 nichts drin.*/
+				/*Da das recv vom Server etwas unberechenbar ist, steht im Case 4 nichts drin.*/
 				break;
 			case 5:
 				printf("Ende Prolog!\n");
