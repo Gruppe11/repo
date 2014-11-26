@@ -2,9 +2,6 @@
 #define shmstruct
 
 
-
-
-
   // struct für die allgemeinen Infos
 struct shm{
    int thinkerpid;
@@ -25,8 +22,8 @@ struct shm{
  
  };
 
-int initshm();
+int initshm(int size);
 struct shm* bindshm(int shmID);
+int delshm(int shmID);
 
-void delshm(int shmID);
 #endif
