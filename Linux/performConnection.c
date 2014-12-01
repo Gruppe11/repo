@@ -10,161 +10,122 @@
 #define MAXGAMENAME 50
 
 /**
- * strcat Funktion, die den String in einem neuen temporären String speichert,
- * um angepasste Strings zur korrekten Übertragung zu übergeben
+ * String an Server senden
+ *
+ * sock: Socket des Servers
+ * serverMessage: Pointer auf String, in dem die zu übermittelnde Nachricht gespeichert ist
  */
-
-int strcattotemp(char* dest, char* src, char* temp){
-	strcpy(temp, src);
-	strcat(temp, dest);
-	return EXIT_SUCCESS;
-}
-
-// Formatierten String an Server senden
-void sendReplyFormatted(int sock, char* reply) {
-	char* container;
-	container = malloc(sizeof(char) * (strlen(reply) + 2));
-	strcpy(container, reply);
-	strcat(container, "\n");
-	send(sock, container, strlen(container), 0);
-	free(container);
-}
- 
-// Funktion überprüft Nachricht vom Server auf Vollständigkeit
-char* checkMessage(int sock, char* message) {
-	int i;
-	char* bufMes = malloc(sizeof(char) * BUFFR);
-
-	if(message[strlen(message)-1] != '\n')
-	{
-		i = recv(sock, bufMes, BUFFR, 0);
-		if(i == 0)
-			perror("\nFehler beim Datenempfang\n");
-		strcat(message, bufMes);
+void sendMessage(int sock, char* clientMessage) {
+	int num = send(sock, clientMessage, strlen(clientMessage), 0);
+	if (num < 0) {
+		perror("ERROR writing to socket");
+		exit(1);
 	}
-	free(bufMes);
-	return message;
 }
 
-/*
- *Funktion um Servernachricht zeilenweise auszugeben. Gibt die letzte Zeile als
- *Ergebnis zurück. 
+/**
+ * Liest eine vollständige Nachricht (letztes Zeichen = '\n') von Server.
+ *
+ * sock: Socket des Servers
+ * serverMessage: Pointer auf String, in den die Nachricht geschrieben werden soll
  */
-char* readLines(char* line) {
-	char del[] = "\n";
-	char* comp = malloc(sizeof(char) * BUFFR);
-	char* ptr;
-	
-	strcpy(comp, line);	
-	
-	ptr = strtok(comp, del);
-	while(ptr != NULL) {
-		//printf("\n%s\n", ptr);
-		strcpy(line, ptr);;
-		// naechsten Abschnitt erstellen
- 		ptr = strtok(NULL, del);
-	}
-	free(comp);
-	free(ptr);
-	return line;
+void getMessage(int sock, char* serverMessage) {
+	char buffer[BUFFR];
+	int numToken;
+	int numTries = 10;
+
+	bzero(serverMessage, BUFFR); //Fülle String mit Nullen
+
+	do {
+		bzero(buffer, BUFFR); //Fülle String mit Nullen
+		numToken = recv(sock, buffer, BUFFR, 0);
+
+			if (numToken < 0)
+				perror("ERROR reading from socket");
+
+		strcat(serverMessage, buffer);
+
+		numTries--;
+	} while ((buffer[numToken-1] != '\n') && numTries > 0);
 }
 
-/*
- *Funktion überprüft ob String == "+ WAIT". Gibt 1 zurück wenn ja, 0 wenn nicht.
+/**
+ * Kommunikation mit dem Server
+ *
+ * sock: Socket des Servers
+ * version: Version des Clients
+ * game_id: Game ID des Spiels
+ * fd: Pipe für ???
  */
-int checkWait(char* check) {
-	char waitToken[] = "+ WAIT";
+int performConnection(int sock, char* version, char* game_id, int fd[]) {
 
-	if(strcmp(check,waitToken) == 0) {
-		printf("Du hast es geschafft.\n");
-		return 1;
+	char serverMessage[BUFFR];
+	char clientMessage[BUFFR];
+	char* line = NULL;
+	int numTries = 10; //Anzahl der Versuche eine Nachricht vom Server zu erhalten
+	char* errorMessage;
+
+	while(1) {
+		bzero(serverMessage, BUFFR); //Fülle String mit Nullen
+		getMessage(sock, serverMessage); //Empfange Nachricht von Server
+
+		//Servernachricht verarbeiten
+		line = strtok(serverMessage, "\n");
+		while (line != NULL) {
+
+			//Switch zwischen positiver/negativer Server Antwort
+			switch (line[0]) {
+
+				//positive Antwort
+				case '+':
+
+					//gebe Servernachricht aus
+					printf("S:%s\n", line);
+
+					if (strstr(line, "WAIT") != 0) {
+						//sende OKWAIT
+						sprintf(clientMessage, "OKWAIT\n");
+						sendMessage(sock, clientMessage);
+						printf("C: %s", clientMessage);
+					} else if (strstr(line, "MNM Gameserver") != 0) {
+						//sende  Protocol Version
+						sprintf(clientMessage, "%s %s\n", "VERSION", version);
+						sendMessage(sock, clientMessage);
+						printf("C: %s", clientMessage);
+					} else if (strstr(line, "Client version accepted") != 0) {
+						//sende Game ID
+						sprintf(clientMessage, "%s %s\n", "ID", game_id);
+						sendMessage(sock, clientMessage);
+						printf("C: %s", clientMessage);
+					} else if (strstr(line, "PLAYING") != 0) {
+						//sende Player
+						sprintf(clientMessage, "%s\n", "PLAYER");
+				    	sendMessage(sock, clientMessage);
+				    	printf("C: %s", clientMessage);
+					}
+					break;
+
+				//negative Antwort - Error Handling
+				case '-':
+
+					//gebe Servernachricht aus
+					errorMessage = strndup(line+1, strlen(line)-1);
+					printf("ERROR:%s\n", errorMessage);
+
+					exit(1);
+			}
+
+			line = strtok(NULL, "\n");
+			numTries = 10; //Anzahl der Versuche resetten
+		}
+
+		if (numTries == 0) {
+			printf("ERROR receiving answer from server\n");
+			exit(1);
+		}
+
+		numTries--;
 	}
-	else
-	{
-		return 0;
-	}
+
+	return 0;
 }
-
-/* Protokollphase Prolog implementieren */
-
-// Übergabe von host und ip als Parameter eigentlich nicht nötig, evtl. streichen?
-int performConnection(int sock, char* version, char* game_id, int fd[]){
-
-	/**
-	* Variablen zum Zwischenspeichern und Behandeln der Daten
-	* der Kommunikation
-	*/
-	
-	int err;
-	char* reader = malloc(sizeof(char) * BUFFR);
-	char* temp = malloc(sizeof(char) * BUFFR);
-	char* buffer = malloc(sizeof(char) * BUFFR);
-	char* player = malloc(sizeof(char) * 8);
-
-	/*Variablen für Schleife*/
-	int exitFlag = 1;
-	int count = 0;
-
-	while(exitFlag == 1)
-	{	
-		count++;
-		err = recv(sock, buffer, BUFFR, 0);
-
-		//Servernachricht komplett empfangen
-		strcpy(reader,checkMessage(sock, buffer));
-		if(buffer[0] == '-')
-		{
-			printf("Fehler: %s\n", reader);
-			return EXIT_FAILURE;
-		}
-		if(err == 0)
-		{
-			perror("\nFehler beim Datenempfang\n");
-			return EXIT_FAILURE;
-		}
-		
-		//Servernachricht zeilenweise ausgeben
-		reader = readLines(reader);
-		//Auf "+ WAIT" überprüfen
-		if(checkWait(reader) == 1) {
-			printf("%s\n", reader);
-			count = 5;
-		}
-		
-		switch(count)
-		{
-			case 1:
-				strcattotemp(version, "VERSION ", temp);
-				sendReplyFormatted(sock, temp);
-				break;
-			case 2:
-				strcattotemp(game_id, "ID ", temp);
-				sendReplyFormatted(sock, temp);
-				break;
-			case 3: 
-				strcattotemp(player, "PLAYER ", temp);
-				sendReplyFormatted(sock, temp);
-				break;
-			case 4:
-				printf("Case 4 wurde durchlaufen.\n");
-				/*Da das recv vom Server etwas unberechenbar ist, steht im Case 4 nichts drin.*/
-				break;
-			case 5:
-				printf("Ende Prolog!\n");
-				exitFlag = 0;
-				break;
-			default:
-				perror("\nDefault!\n");
-				break;
-		}
-		//Speicher überschreiben um Fehler zu vermeiden
-		memset(reader, '\0', strlen(reader));
-		memset(buffer, '\0', strlen(buffer));
-	}
-	free(reader);
-	free(temp);
-	free(buffer);
-	free(player);
-	return EXIT_SUCCESS;
-}
-

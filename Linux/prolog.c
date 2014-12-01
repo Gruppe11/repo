@@ -22,7 +22,7 @@
 #define GAMEKINDNAME "NMMOrris"
 #define PORTNUMBER 1357
 #define HOSTNAME "sysprak.priv.lab.nm.ifi.lmu.de"
-#define VERSION "1.42" //Welche Version hat der Server? Kriege keine Verbindung.
+#define VERSION "1.0"
 
 
 
