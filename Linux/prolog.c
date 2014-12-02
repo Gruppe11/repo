@@ -16,7 +16,6 @@
  *
  */
 
-
 // Zur Verbindung nötige Konstanten deklarieren
 // String-Konstanten evtl. als const char hostname[] deklarieren?
 #define GAMEKINDNAME "NMMOrris"
@@ -25,27 +24,24 @@
 #define VERSION "1.0"
 
 
-
 int main(int argc, char *argv[]) {
 
-  // Game-ID als Kommandozeilenparameter auslesen und überprüfen
-  char game_id[12];
+  char game_id[11]; // Game-ID als Kommandozeilenparameter auslesen und überprüfen
+  int fd[2]; // Pipe erstellen
 
-  if (argc < 2){
-    perror("\nGame-ID nicht eingegeben\n");
+  if (argc < 2) {
+    perror("Game-ID nicht eingegeben\n");
     return EXIT_FAILURE;
-}
+  }
   
 
   strcpy(game_id, argv[1]);
 
   if (strlen(game_id) != 11) {
-    perror("\nGame-ID nicht 11-stellig\n");
+    printf("Game-ID nicht 11-stellig\n");
     return EXIT_FAILURE;
   }
 
-  // Pipe erstellen
-  int fd[2];
 
   /* Verbindung zu Gameserver aufbauen */
 
@@ -56,7 +52,7 @@ int main(int argc, char *argv[]) {
   // Hostname in IP Adresse übersetzen
   struct hostent* ip = gethostbyname(HOSTNAME);
   if (ip == NULL) {
-    perror("\nFehler beim Anfordern der IP.\n");
+    printf("Fehler beim Anfordern der IP\n");
     return EXIT_FAILURE;
   }
 
@@ -67,20 +63,20 @@ int main(int argc, char *argv[]) {
 
   // Verbindung aufbauen und überprüfen
   if (connect(sock, (struct sockaddr*) &host, sizeof(host)) == 0) {
-    printf("\nVerbindung hergestellt!\n");
-  }else{
-    perror("\nFehler beim Verbindungsaufbau.\n");
+    printf("Verbindung hergestellt\n\n");
+  } else {
+    printf("Fehler beim Verbindungsaufbau\n");
     return EXIT_FAILURE;
   }
 
   // Prologphase der Kommunikation mit dem Server durchführen und testen
   if (performConnection(sock, VERSION, game_id, fd) != 0) {
     close(sock);
-    perror("\nSocket geschlossen.\n");
+    printf("Kommunikation mit dem Server unterbrochen - Socket geschlossen\n");
     return EXIT_FAILURE;
   }
 
   close(sock);
-  perror("\nSocket geschlossen.\n");
+  printf("Socket geschlossen\n");
   return EXIT_SUCCESS;
 }

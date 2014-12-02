@@ -1,4 +1,4 @@
-CFLAGS = -g -Wall -std=gnu99 
+CFLAGS = -g -Wall -Werror -std=gnu99 
 
 
 
