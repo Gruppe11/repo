@@ -91,11 +91,11 @@ int performConnection(int sock, char* version, char* game_id, int fd[]) {
 		// Switch zwischen positiver/negativer Server Antwort
 		switch (line[0]) {
 
-			// positive Antwort
+		// positive Antwort
 		case '+':
 
 			// gebe Servernachricht aus
-//				printf("S:%s\n", line);
+//			printf("S:%s\n", line);
 
 			/* Wird später für die Spielverlaufsphase gebraucht */
 /*
@@ -129,7 +129,7 @@ int performConnection(int sock, char* version, char* game_id, int fd[]) {
 			} else if (strstr(line, "+ PLAYING") != 0) {
 				// sende Player
 				sprintf(clientMessage, "%s\n", "PLAYER");
-		    	sendMessage(sock, clientMessage);
+				sendMessage(sock, clientMessage);
 
 				// lese Gametyp ein + kontrolliere diesen
 				sscanf(line, "%*s %*s %s", temp1);
@@ -170,7 +170,9 @@ int performConnection(int sock, char* version, char* game_id, int fd[]) {
 			// gebe Servernachricht aus
 			errorMessage = strndup(line + 2, strlen(line) - 2);
 
-			if (strstr(line, "No free computer player found for that game - exiting") != 0) {
+			if (strncmp(line, "- exiting", 9) == 0) {
+				fprintf(stderr, "\nGame ID nicht gefunden\n");
+			} else if (strstr(line, "No free computer player found for that game - exiting") != 0) {
 				fprintf(stderr, "\nKein freier Platz vorhanden\n");
 			} else if (strstr(line, "Socket timeout - please be quicker next time") != 0) {
 				fprintf(stderr, "\nSocket timeout\n");
