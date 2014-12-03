@@ -11,34 +11,37 @@
 /* Fehlt eventuell Fehlerbehandlung?? */
 
 // String umgebende Leerzeichen entfernen zum Vergleichen
-char *trim_space(char *str){
+char *trim_space(char *str) {
+
 	char *end;
 
 	// Führende Leerzeichen löschen
-	while(isspace(*str)){
+	while(isspace(*str)) {
 		str++;
 	}
 
 	// Alles Leerzeichen
-	if(*str == 0){ 
+	if(*str == 0) { 
 		return str;
 	}
 
 	// Nachfolgende Leerzeichen löschen
 	end = str + strlen(str) - 1;
-	while(end > str && isspace(*end)){
+	while(end > str && isspace(*end)) {
 		end--;
 	}
 	
 	// Neue Nullterminierung hinzufügen
 	*(end+1) = 0;
 	return str;
+
 }
 
 
 // String umgebende Leerzeichen entfernen für Ausgabe
-size_t trim_space2(char *out, size_t len, const char *str){
-	if(len == 0){
+size_t trim_space2(char *out, size_t len, const char *str) {
+
+	if (len == 0) {
 		return 0;
 	}
 
@@ -46,19 +49,19 @@ size_t trim_space2(char *out, size_t len, const char *str){
 	size_t out_size;
 
 	// Führende Leerzeichen löschen
-	while(isspace(*str)){
+	while (isspace(*str)) {
 		str++;
 	}
 	
 	// Alles Leerzeichen?
-	if(*str == 0){
+	if (*str == 0) {
 		*out = 0;
 		return 1;
 	}
 
 	// Nachfolgende Leerzeichen löschen
 	end = str + strlen(str) - 1;
-	while(end > str && isspace(*end)){
+	while (end > str && isspace(*end)) {
 		end--;
 	}
 	end++;
@@ -70,14 +73,16 @@ size_t trim_space2(char *out, size_t len, const char *str){
 	memcpy(out, str, out_size);
 	out[out_size] = 0;
 	return out_size;
+
 }
 
 
 // Konfigurationsdaten von Konfigurationsdatei in configstruct einlesen
-struct config get_config(char *filename){
+struct config get_config(char *filename) {
+
 	struct config configstruct;
 	FILE *file = fopen (filename, "r");
-	if (file != NULL){
+	if (file != NULL) {
 		char line[BUFFR];
 		while(fgets(line, sizeof(line), file) != NULL){
 			char *confvalue;
@@ -101,8 +106,10 @@ struct config get_config(char *filename){
 				}
 				confvalue = strtok(NULL, TOKEN);
 			}
-		} 
-	} 
+		}
+	}
+
 	fclose(file);
 	return configstruct;
+
 }
