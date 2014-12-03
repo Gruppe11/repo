@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 			/* Verbindung zu Gameserver aufbauen */
 
 			// Hostname in IP Adresse übersetzen
-			struct hostent* ip = gethostbyname(HOSTNAME);
+			struct hostent* ip = gethostbyname(configstruct.hostname);
 			if (ip == NULL) {
 				perror("\nFehler beim Anfordern der IP");
 				return EXIT_FAILURE;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
 			// Benötigte Variablen der Struktur Host Werte zuweisen
 			memcpy(&(host.sin_addr), ip->h_addr_list[0], ip->h_length);
 			host.sin_family = AF_INET;
-			host.sin_port = htons(PORTNUMBER);
+			host.sin_port = htons(atoi(configstruct.portnumber));
 
 			// Verbindung aufbauen und überprüfen
 			sock = socket(AF_INET, SOCK_STREAM, 0);
