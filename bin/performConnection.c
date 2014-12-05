@@ -5,9 +5,11 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include "sharedmemory.h"
 #include "performConnection.h"
 #define BUFFR 512
 #define MAXGAMENAME 50
+
 
 /**
  * String an Server senden
@@ -72,7 +74,7 @@ char* getLine(int sock) {
  * game_id: Game ID des Spiels
  * fd: Pipe für ???
  */
-int performConnection(int sock, char* version, char* game_id, int fd[]) {
+int performConnection(int sock, char* version, char* game_id, int fd[],shm * shm) {
 
 	char* line;
 	char clientMessage[BUFFR];
@@ -144,12 +146,19 @@ int performConnection(int sock, char* version, char* game_id, int fd[]) {
 				// lese Spielname ein + gebe diesen aus
 				sscanf(line, "%*s %s", temp1);
 				printf("Spielname: %s\n", temp1);
+				strncpy(shm->spielname,temp1,sizeof(shm->spielname) );
 			} else if (strstr(line, "+ YOU") != 0) {
 				// lese eigene Spielervariablen ein + gebe diese aus
 				sscanf(line, "%*s %*s %d %[^\n]s", &temp2, temp1);
-				printf("Du (%s) bist Spieler #%d\n", temp1, temp2 + 1);
-
+				printf("Du (%s) bist Spieler #%d\n", temp1, temp2 + 1);			
+				shm->eigspielernummer = temp2+1;
+				if(shm->eigspielernummer>0)
+				shm->spieleratt[shm->eigspielernummer-1].spielernummer = shm->eigspielernummer;	
+				strncpy(shm->spieleratt[shm->eigspielernummer-1].spielername,temp1,sizeof(shm->spieleratt[shm->eigspielernummer-1].spielername));	
+				shm->spieleratt[shm->eigspielernummer-1].regflag = 1;
 				line = getLine(sock); // nächste Zeile "+ TOTAL 2 <<Spieleranzahl>>"
+				sscanf(line, "%*s %*s %d", &temp2 );
+				shm->anzahlspieler = temp2;
 				line = getLine(sock); // nächste Zeile "+ <<Spielernummer>> <<Spielername>> <<Bereit>>"
 
 				// lese Gegner Spielervariablen ein + gebe diese aus
@@ -160,6 +169,10 @@ int performConnection(int sock, char* version, char* game_id, int fd[]) {
 					printf("Spieler #%d (%s) ist bereit\n\n", temp2 + 1, temp1);
 				else
 					printf("Spieler #%d (%s) ist noch nicht bereit\n", temp2 + 1, temp1);
+				shm->spieleratt[temp2 ].spielernummer = temp2+1;	
+				strncpy(shm->spieleratt[temp2 ].spielername,temp1,sizeof(shm->spieleratt[temp2 ].spielername));	
+				shm->spieleratt[temp2 ].regflag = temp3;
+			
 			}
 
 			break;

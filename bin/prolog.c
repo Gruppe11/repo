@@ -9,7 +9,9 @@
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
-
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include "sharedmemory.h"
 #include "performConnection.h"
 #include "config.h"
 
@@ -55,6 +57,26 @@ int main(int argc, char *argv[]) {
 	}
 	strcpy(game_id, argv[1]);
 
+	shm *shm;
+	int shmID;
+	int shmSize = sizeof(shm);
+
+	shmID = initshm(shmSize);
+
+	if (shmID < 1) {
+		printf("No SHM\n");		
+		return EXIT_FAILURE;
+	}
+	
+	/* SHM binden */
+	shm = bindshm(shmID);
+
+	/* Im Fehler shm  -1 */
+	if (shm == (void *) -1) {
+		printf("Fehler binden shm");
+		return EXIT_FAILURE;
+	}
+	
 
 	/**
 	* zweiten Prozess erstellen
@@ -74,7 +96,9 @@ int main(int argc, char *argv[]) {
 		case 0:
 
 			printf("\nKindprozess Connector beginnt:\n");		
-
+			
+			shm->connectorpid = pid;
+			
 			/* Verbindung zu Gameserver aufbauen */
 
 			// Hostname in IP Adresse übersetzen
@@ -99,7 +123,7 @@ int main(int argc, char *argv[]) {
 			}
 
 			// Prologphase der Kommunikation mit dem Server durchführen und testen
-			if (performConnection(sock, VERSION, game_id, fd) != 0) {
+			if (performConnection(sock, VERSION, game_id, fd, shm) != 0) {
 				close(sock);
 				fprintf(stderr, "\nSocket geschlossen\n");
 				return EXIT_FAILURE;
@@ -110,7 +134,9 @@ int main(int argc, char *argv[]) {
 	
 		// Thinker
 		default: 
-
+				
+				shm->thinkerpid = pid;
+			
 			// Warten bis Kindprozess Connector fertig
 			if (wait(&status) == -1) {
 				perror("\nFehler beim Warten auf Kindprozess");
@@ -120,7 +146,11 @@ int main(int argc, char *argv[]) {
 				perror("\nKindprozess nicht korrekt terminiert");
 				return EXIT_FAILURE;
 			}
-
+			// shm zerstören	
+			shmdt(shm);
+			if (delshm(shmID) == -1) {
+				printf("Fehler bei Zerstoerung von shm \n");
+			}
 			break;
 
 	}
