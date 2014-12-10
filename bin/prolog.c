@@ -34,17 +34,11 @@
 int main(int argc, char *argv[]) {
 
 	char game_id[11];
-	int sock, status;
-	struct sockaddr_in host;
+	int status;
 	int fd[2]; // für Pipe
 	pid_t pid;
 	char* conf_datei = malloc(256);
 
-	/* Möglichkeit der Angabe einer eigenen Config-Datei als Kommandozeilenargument muss noch implementiert werden  */
-	// Nachfolgend wird einfach default Config-Datei verwendet
-	// Config-Datei einlesen und struct initialisieren
-	strcpy(conf_datei, "client.conf");
-	configstruct = get_config(conf_datei);
 
 	// Game-ID als Kommandozeilenparameter auslesen und überprüfen
 	if (argc < 2){
@@ -56,6 +50,19 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 	strcpy(game_id, argv[1]);
+
+
+	/* Abfrage ob Konfiguationsdatei als Kommandozeile übergeben wird.
+	** Wenn nicht dann Default. */
+	if(argc < 3) {
+		strcpy(conf_datei, "client.conf");
+		fprintf(stdout, "\nKeine Konfigurationsdatei angegeben: Verwende Default\n");
+	}
+	else {
+		strcpy(conf_datei, argv[2]);
+	}
+	// Config-Datei einlesen und struct initialisieren
+	configstruct = get_config(conf_datei);
 
 	shm *shm;
 	int shmID;
@@ -101,30 +108,8 @@ int main(int argc, char *argv[]) {
 			
 			/* Verbindung zu Gameserver aufbauen */
 
-			// Hostname in IP Adresse übersetzen
-			struct hostent* ip = gethostbyname(configstruct.hostname);
-			if (ip == NULL) {
-				printf("\nFehler beim Anfordern der IP\n");
-				return EXIT_FAILURE;
-			}
-
-			// Benötigte Variablen der Struktur Host Werte zuweisen
-			memcpy(&(host.sin_addr), ip->h_addr_list[0], ip->h_length);
-			host.sin_family = AF_INET;
-			host.sin_port = htons(atoi(configstruct.portnumber));
-
-			// Verbindung aufbauen und überprüfen
-			sock = socket(AF_INET, SOCK_STREAM, 0);
-			if (connect(sock, (struct sockaddr*) &host, sizeof(host)) == 0) {
-				printf("\nVerbindung hergestellt!\n");
-			} else {
-				perror("\nFehler beim Verbindungsaufbau");
-				return EXIT_FAILURE;
-			}
-
 			// Prologphase der Kommunikation mit dem Server durchführen und testen
-			if (performConnection(sock, VERSION, game_id, fd, shm) != 0) {
-				close(sock);
+			if (performConnection(VERSION, game_id, fd, shm) != 0) {
 				fprintf(stderr, "\nSocket geschlossen\n");
 				return EXIT_FAILURE;
 			}
@@ -143,20 +128,18 @@ int main(int argc, char *argv[]) {
 				return EXIT_FAILURE;
 			}
 			if (WIFEXITED(status) == 0) {
-				printf("\nKindprozess nicht korrekt terminiert\n");
+				perror("\nKindprozess nicht korrekt terminiert");
 				return EXIT_FAILURE;
 			}
-
 			// shm zerstören	
 			shmdt(shm);
 			if (delshm(shmID) == -1) {
-				printf("\nFehler bei Zerstoerung von shm\n");
+				printf("Fehler bei Zerstoerung von shm \n");
 			}
 			break;
 
 	}
   
-	close(sock);
 	//printf("Socket geschlossen.\n");
 	return EXIT_SUCCESS;
 
