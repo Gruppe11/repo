@@ -6,7 +6,7 @@
 // char[] Datentyp für portnumber sollte laut Aufgabenstellung anders sein
 struct config {
 	char hostname[BUFFR];
-	char portnumber[BUFFR];
+	int portnumber;
 	char gamekindname[BUFFR];
 };
 
