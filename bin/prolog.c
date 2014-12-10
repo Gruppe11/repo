@@ -128,13 +128,14 @@ int main(int argc, char *argv[]) {
 				return EXIT_FAILURE;
 			}
 			if (WIFEXITED(status) == 0) {
-				perror("\nKindprozess nicht korrekt terminiert");
+				fprintf(stderr, "\nKindprozess nicht korrekt terminiert\n");
 				return EXIT_FAILURE;
 			}
+
 			// shm zerstören	
 			shmdt(shm);
 			if (delshm(shmID) == -1) {
-				printf("Fehler bei Zerstoerung von shm \n");
+				fprintf(stderr, "\nFehler bei Zerstoerung von shm\n");
 			}
 			break;
 

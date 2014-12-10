@@ -36,7 +36,7 @@ void sendMessage(int sock, char* clientMessage) {
  * sock: Socket des Servers
  * serverMessage: Pointer auf String, in den die Nachricht geschrieben werden soll
  */
-char* getLine(int sock) {
+void getLine(int sock, char* line2) {
 
 	static char* line;
 	static char serverMessage[BUFFR];
@@ -65,10 +65,8 @@ char* getLine(int sock) {
 
 		line = strtok(serverMessage, "\n");
 	}
-	//printf("numToken: %i\n", numToken);
-	//printf("line: %s\n", line);
-	return line;
 
+	strcpy(line2, line);
 }
 
 int getSock(struct config configS) {
@@ -111,139 +109,220 @@ int getSock(struct config configS) {
  */
 int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 
-	char* line;
+	char* line = malloc(sizeof(char) * BUFFR);
 	char clientMessage[BUFFR];
 	char* errorMessage;
+	int sock;
 
 	// Temporärer Speicher für das Auslesen von Variablen aus den Serverantworten
-	char* temp1;
-	temp1 = malloc(sizeof(char) * 20);
+	char* temp1 = malloc(sizeof(char) * 20);
 	int temp2;
 	int temp3;
-	int sock;
-	
+
+	// Flags zum eindeutigen Kommunikation miit Server
+	int phase = 0; // Flag zur Bestimmung der Phase
+	int capture = 0;  // Flag zum Capture Wert
+
+
+
 	sock = getSock(configstruct);
 
 	while (1) {
-		line = getLine(sock); // Empfange Nachricht von Server
-		//printf("%s\n", line);
+		getLine(sock, line); // Empfange Nachricht von Server
+
+		// gebe Servernachricht aus (für Debugging)
+//		printf("	S:%s\n", line);
+
 		// Servernachricht verarbeiten
 		// Switch zwischen positiver/negativer Server Antwort
 		switch (line[0]) {
 
-		// positive Antwort
-		case '+':
+			// positive Antwort
+			case '+':
 
-			// gebe Servernachricht aus
-//			printf("S:%s\n", line);
+				if (phase == 0) {
 
-			/* Wird später für die Spielverlaufsphase gebraucht */
-/*
-			if (strstr(line, "+ WAIT") != 0) {
-				//sende OKWAIT
-				sprintf(clientMessage, "OKWAIT\n");
-				sendMessage(sock, clientMessage);
-				printf("C: %s", clientMessage);
-			} else if (strstr(line, "+ ENDPIECELIST") != 0) {
-				//sende  Protocol Version
-				sprintf(clientMessage, "THINKING\n");
-				sendMessage(sock, clientMessage);
-				printf("C: %s", clientMessage);
-			}
-*/
-			if (strstr(line, "+ MNM Gameserver") != 0) {
-				// sende  Protocol Version
-				sprintf(clientMessage, "%s %s\n", "VERSION", version);
-				sendMessage(sock, clientMessage);
+					/* Protokollphase Prolog */
 
-				// lese Serverversion ein + gebe diese aus
-				sscanf(line, "%*s %*s %*s v%s", temp1);
-				printf("\nServer Version %s\n", temp1);
-			} else if (strstr(line, "+ Client version accepted") != 0) {
-				// sende Game ID
-				sprintf(clientMessage, "%s %s\n", "ID", game_id);
-				sendMessage(sock, clientMessage);
+					if (strstr(line, "+ MNM Gameserver") != 0) {
 
-				// gebe Info aus
-				printf("Client Version %s akzeptiert\n", version);
-			} else if (strstr(line, "+ PLAYING") != 0) {
-				// sende Player
-				sprintf(clientMessage, "%s\n", "PLAYER");
-				sendMessage(sock, clientMessage);
+						// sende  Protocol Version
+						sprintf(clientMessage, "%s %s\n", "VERSION", version);
+						sendMessage(sock, clientMessage);
 
-				// lese Gametyp ein + kontrolliere diesen
-				sscanf(line, "%*s %*s %s", temp1);
-				if (strstr(temp1, "NMMorris") == 0) {
-					perror("\nFalscher Spieltyp");
-					return EXIT_FAILURE;
+						// lese Serverversion ein + gebe diese aus
+						sscanf(line, "%*s %*s %*s v%s", temp1);
+						printf("\nServer Version %s\n", temp1);
+
+					} else if (strstr(line, "+ Client version accepted") != 0) {
+
+						// sende Game ID
+						sprintf(clientMessage, "%s %s\n", "ID", game_id);
+						sendMessage(sock, clientMessage);
+
+						// gebe Info aus
+						printf("Client Version %s akzeptiert\n", version);
+
+					} else if (strstr(line, "+ PLAYING") != 0) {
+
+						// sende Player
+						sprintf(clientMessage, "%s\n", "PLAYER");
+						sendMessage(sock, clientMessage);
+
+						// lese Gametyp ein + kontrolliere diesen
+						sscanf(line, "%*s %*s %s", temp1);
+						if (strstr(temp1, "NMMorris") == 0) {
+							perror("\nFalscher Spieltyp");
+							return EXIT_FAILURE;
+						}
+						printf("Spieltyp %s akzeptiert\n\n", temp1);
+
+						getLine(sock, line); // nächste Zeile
+
+						// lese Spielname ein + gebe diesen aus
+						sscanf(line, "%*s %[^\n]s", temp1);
+						printf("Spielname: %s\n", temp1);
+						strncpy(shm->spielname,temp1,sizeof(shm->spielname) );
+
+					} else if (strstr(line, "+ YOU") != 0) {
+
+						// lese eigene Spielervariablen ein + gebe diese aus
+						sscanf(line, "%*s %*s %d %[^\n]s", &temp2, temp1);
+						printf("Du (%s) bist Spieler #%d\n", temp1, temp2 + 1);			
+						shm->eigspielernummer = temp2+1;
+						if(shm->eigspielernummer>0)
+						shm->spieleratt[shm->eigspielernummer-1].spielernummer = shm->eigspielernummer;	
+						strncpy(shm->spieleratt[shm->eigspielernummer-1].spielername,temp1,sizeof(shm->spieleratt[shm->eigspielernummer-1].spielername));	
+						shm->spieleratt[shm->eigspielernummer-1].regflag = 1;
+						getLine(sock, line); // nächste Zeile
+						sscanf(line, "%*s %*s %d", &temp2);
+						shm->anzahlspieler = temp2;
+						getLine(sock, line); // nächste Zeile
+
+						// lese Gegner Spielervariablen ein + gebe diese aus
+						sscanf(line, "%*s %d", &temp2);
+						temp1 = strndup(line + 4, strlen(line) - 6);
+						temp3 = atoi(strndup(line + 5 + strlen(temp1), 1));
+						if (temp3 == 1)
+							printf("Spieler #%d (%s) ist bereit\n\n", temp2 + 1, temp1);
+						else
+							printf("Spieler #%d (%s) ist noch nicht bereit\n", temp2 + 1, temp1);
+						shm->spieleratt[temp2 ].spielernummer = temp2+1;	
+						strncpy(shm->spieleratt[temp2 ].spielername,temp1,sizeof(shm->spieleratt[temp2 ].spielername));	
+						shm->spieleratt[temp2 ].regflag = temp3;
+					
+					} else if (strstr(line, "+ ENDPLAYERS") != 0) {
+
+						// setze Flag für Spielverlaufsphase
+						phase = 1;
+
+					}
+
+				} else if (phase == 1) {
+
+					/* Spielverlaufsphase */
+
+					if (strstr(line, "+ WAIT") != 0) {
+
+						// sende "OKWAIT"
+						sprintf(clientMessage, "OKWAIT\n");
+						sendMessage(sock, clientMessage);
+						printf("Warte auf Gegenspieler...\n");
+
+					} else if (strstr(line, "+ MOVE ") != 0) {
+
+						// lese Zeit für Spielzug
+						sscanf(line, "%*s %*s %d", &temp2);
+// temp2: Zeit für Spielzug
+
+					} else if (strstr(line, "+ CAPTURE") != 0) {
+
+						// setze Capture Flag
+						sscanf(line, "%*s %*s %d", &temp2);
+						capture = temp2;
+
+					} else if (strstr(line, "+ PIECELIST") != 0) {
+
+						// lese Anzahl Spieler/Steine pro Spieler
+						sscanf(line, "%*s %*s %d,%d", &temp2, &temp3);
+// temp2: Anzahl Spieler
+// temp3: Anzahl Steine pro Spieler
+
+					} else if (strstr(line, "+ PIECE") != 0) {
+
+						// lese Positionen der Steine
+						sscanf(line, "%*s PIECE%d.%d %s", &temp2, &temp3, temp1);
+// temp2: Spielernummer
+// temp3: Steinnummer
+// temp1: Position des Steins
+
+					} else if (strstr(line, "+ ENDPIECELIST") != 0) {
+
+						// sende "THINKING"
+						sprintf(clientMessage, "THINKING\n");
+						sendMessage(sock, clientMessage);
+
+					} else if (strstr(line, "+ OKTHINK") != 0) {
+
+// Übergebe Information an Thinker
+// Thinker
+
+// solange noch kein Thinker aktiv: lese Spielzugeingabe und sende diese formatiert an den Server
+					if (capture == 0) printf("Setze einen Stein: ");
+					else if (capture == 1) printf("Entferne einen Stein des Gegners: ");
+						scanf("%s", temp1);
+						sprintf(clientMessage, "PLAY %s\n", temp1);
+
+						// sende Spielzug
+						sendMessage(sock, clientMessage);
+
+					} else if (strstr(line, "+ MOVEOK") != 0) {
+
+						// Spielzug akzeptiert
+						printf("Spielzug akzeptiert\n\n");
+							
+					} else if (strstr(line, "+ GAMEOVER") != 0) {
+
+// evtl. Flag setzen für Ende, da Vergleich "+ ENDPIECELIST" sonst nicht eindeutig
+
+					}
+
 				}
-				printf("Spieltyp %s akzeptiert\n\n", temp1);
 
-				line = getLine(sock); // nächste Zeile "+ <<Game-Name>>"
+				break;
 
-				// lese Spielname ein + gebe diesen aus
-				sscanf(line, "%*s %s", temp1);
-				printf("Spielname: %s\n", temp1);
-				strncpy(shm->spielname,temp1,sizeof(shm->spielname) );
-			} else if (strstr(line, "+ YOU") != 0) {
-				// lese eigene Spielervariablen ein + gebe diese aus
-				sscanf(line, "%*s %*s %d %[^\n]s", &temp2, temp1);
-				printf("Du (%s) bist Spieler #%d\n", temp1, temp2 + 1);			
-				shm->eigspielernummer = temp2+1;
-				if(shm->eigspielernummer>0)
-				shm->spieleratt[shm->eigspielernummer-1].spielernummer = shm->eigspielernummer;	
-				strncpy(shm->spieleratt[shm->eigspielernummer-1].spielername,temp1,sizeof(shm->spieleratt[shm->eigspielernummer-1].spielername));	
-				shm->spieleratt[shm->eigspielernummer-1].regflag = 1;
-				line = getLine(sock); // nächste Zeile "+ TOTAL 2 <<Spieleranzahl>>"
-				sscanf(line, "%*s %*s %d", &temp2 );
-				shm->anzahlspieler = temp2;
-				line = getLine(sock); // nächste Zeile "+ <<Spielernummer>> <<Spielername>> <<Bereit>>"
+			// negative Antwort - Error Handling
+			case '-':
 
-				// lese Gegner Spielervariablen ein + gebe diese aus
-				sscanf(line, "%*s %d", &temp2);
-				temp1 = strndup(line + 4, strlen(line) - 6);
-				temp3 = atoi(strndup(line + 5 + strlen(temp1), 1));
-				if (temp3 == 1)
-					printf("Spieler #%d (%s) ist bereit\n\n", temp2 + 1, temp1);
-				else
-					printf("Spieler #%d (%s) ist noch nicht bereit\n", temp2 + 1, temp1);
-				shm->spieleratt[temp2 ].spielernummer = temp2+1;	
-				strncpy(shm->spieleratt[temp2 ].spielername,temp1,sizeof(shm->spieleratt[temp2 ].spielername));	
-				shm->spieleratt[temp2 ].regflag = temp3;
-			
+				// gebe Servernachricht aus
+				errorMessage = strndup(line + 2, strlen(line) - 2);
+
+				if (strncmp(line, "- exiting", 9) == 0) {
+					fprintf(stderr, "\nGame ID nicht gefunden\n");
+				} else if (strstr(line, "No free computer player found for that game - exiting") != 0) {
+					fprintf(stderr, "\nKein freier Platz vorhanden\n");
+				} else if (strstr(line, "Socket timeout - please be quicker next time") != 0) {
+					fprintf(stderr, "\nSocket timeout\n");
+				} else if (strstr(line, "Protocol mismatch - you probably didn't want to talk to the fabulous gameserver") != 0) {
+					fprintf(stderr, "\nProtocol mismatch\n");
+				} else if (strstr(line, "We expected you to THINK!") != 0) {
+					fprintf(stderr, "\nZuerst OKTHINK senden, erst dann den Spielzug\n");
+				} else if (strstr(line, "Destination is already occupied") != 0) {
+					fprintf(stderr, "\nSpielzug ungültig: Das Feld ist schon besetzt\n");
+				} else if (strstr(line, "You can't capture yourself") != 0) {
+					fprintf(stderr, "\nSpielzug ungültig: Du kannst deinen eigenen Stein nicht entfernen\n");
+				} else {
+					fprintf(stderr, "\nUnerwarteter Serverfehler: %s\n", errorMessage);
+				}
+
+				return EXIT_FAILURE;
+
+			// default: ist das überhaupt nötig?
+			default:
+
+				fprintf(stderr, "\nServernachricht kann nicht verarbeitet werden\n");
+				return EXIT_FAILURE;
 			}
-
-			break;
-
-		// negative Antwort - Error Handling
-		case '-':
-
-			// gebe Servernachricht aus
-			errorMessage = strndup(line + 2, strlen(line) - 2);
-
-			if (strncmp(line, "- exiting", 9) == 0) {
-				fprintf(stderr, "\nGame ID nicht gefunden\n");
-			} else if (strstr(line, "No free computer player found for that game - exiting") != 0) {
-				fprintf(stderr, "\nKein freier Platz vorhanden\n");
-			} else if (strstr(line, "Socket timeout - please be quicker next time") != 0) {
-				fprintf(stderr, "\nSocket timeout\n");
-			} else if (strstr(line, "Protocol mismatch - you probably didn't want to talk to the fabulous gameserver") != 0) {
-				fprintf(stderr, "\nProtocol mismatch\n");
-			} else if (strstr(line, "We expected you to THINK!") != 0) {
-				fprintf(stderr, "\nClient soll DENKEN\n");
-			} else {
-				fprintf(stderr, "\nUnerwarteter Serverfehler: %s\n", errorMessage);
-			}
-
-			return EXIT_FAILURE;
-
-		// default: ist das überhaupt nötig?
-		default:
-
-			fprintf(stderr, "\nServernachricht kann nicht verarbeitet werden\n");
-			fprintf(stdout, "%s\n", line);
-			return EXIT_FAILURE;
-		}
 	}
 
 	return EXIT_SUCCESS;
