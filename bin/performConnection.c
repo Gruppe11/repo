@@ -33,7 +33,7 @@ void sendMessage(int sock, char* clientMessage) {
  * sock: Socket des Servers
  * serverMessage: Pointer auf String, in den die Nachricht geschrieben werden soll
  */
-char* getLine(int sock) {
+void getLine(int sock, char* line2) {
 
 	static char* line;
 	static char serverMessage[BUFFR];
@@ -62,8 +62,7 @@ char* getLine(int sock) {
 		line = strtok(serverMessage, "\n");
 	}
 
-	return line;
-
+	strcpy(line2, line);
 }
 
 /**
@@ -77,6 +76,7 @@ char* getLine(int sock) {
 int performConnection(int sock, char* version, char* game_id, int fd[],shm * shm) {
 
 	char* line;
+	line = malloc(sizeof(char) * BUFFR);
 	char clientMessage[BUFFR];
 	char* errorMessage;
 
@@ -87,7 +87,7 @@ int performConnection(int sock, char* version, char* game_id, int fd[],shm * shm
 	int temp3;
 
 	while (1) {
-		line = getLine(sock); // Empfange Nachricht von Server
+		getLine(sock, line); // Empfange Nachricht von Server
 
 		// Servernachricht verarbeiten
 		// Switch zwischen positiver/negativer Server Antwort
@@ -114,6 +114,7 @@ int performConnection(int sock, char* version, char* game_id, int fd[],shm * shm
 			}
 */
 			if (strstr(line, "+ MNM Gameserver") != 0) {
+
 				// sende  Protocol Version
 				sprintf(clientMessage, "%s %s\n", "VERSION", version);
 				sendMessage(sock, clientMessage);
@@ -121,14 +122,18 @@ int performConnection(int sock, char* version, char* game_id, int fd[],shm * shm
 				// lese Serverversion ein + gebe diese aus
 				sscanf(line, "%*s %*s %*s v%s", temp1);
 				printf("\nServer Version %s\n", temp1);
+
 			} else if (strstr(line, "+ Client version accepted") != 0) {
+
 				// sende Game ID
 				sprintf(clientMessage, "%s %s\n", "ID", game_id);
 				sendMessage(sock, clientMessage);
 
 				// gebe Info aus
 				printf("Client Version %s akzeptiert\n", version);
+
 			} else if (strstr(line, "+ PLAYING") != 0) {
+
 				// sende Player
 				sprintf(clientMessage, "%s\n", "PLAYER");
 				sendMessage(sock, clientMessage);
@@ -141,13 +146,15 @@ int performConnection(int sock, char* version, char* game_id, int fd[],shm * shm
 				}
 				printf("Spieltyp %s akzeptiert\n\n", temp1);
 
-				line = getLine(sock); // nächste Zeile "+ <<Game-Name>>"
+				getLine(sock, line); // nächste Zeile
 
 				// lese Spielname ein + gebe diesen aus
 				sscanf(line, "%*s %s", temp1);
 				printf("Spielname: %s\n", temp1);
 				strncpy(shm->spielname,temp1,sizeof(shm->spielname) );
+				
 			} else if (strstr(line, "+ YOU") != 0) {
+
 				// lese eigene Spielervariablen ein + gebe diese aus
 				sscanf(line, "%*s %*s %d %[^\n]s", &temp2, temp1);
 				printf("Du (%s) bist Spieler #%d\n", temp1, temp2 + 1);			
@@ -156,10 +163,10 @@ int performConnection(int sock, char* version, char* game_id, int fd[],shm * shm
 				shm->spieleratt[shm->eigspielernummer-1].spielernummer = shm->eigspielernummer;	
 				strncpy(shm->spieleratt[shm->eigspielernummer-1].spielername,temp1,sizeof(shm->spieleratt[shm->eigspielernummer-1].spielername));	
 				shm->spieleratt[shm->eigspielernummer-1].regflag = 1;
-				line = getLine(sock); // nächste Zeile "+ TOTAL 2 <<Spieleranzahl>>"
+				getLine(sock, line); // nächste Zeile
 				sscanf(line, "%*s %*s %d", &temp2 );
 				shm->anzahlspieler = temp2;
-				line = getLine(sock); // nächste Zeile "+ <<Spielernummer>> <<Spielername>> <<Bereit>>"
+				getLine(sock, line); // nächste Zeile
 
 				// lese Gegner Spielervariablen ein + gebe diese aus
 				sscanf(line, "%*s %d", &temp2);

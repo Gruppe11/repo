@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
 			// Hostname in IP Adresse übersetzen
 			struct hostent* ip = gethostbyname(configstruct.hostname);
 			if (ip == NULL) {
-				perror("\nFehler beim Anfordern der IP");
+				printf("\nFehler beim Anfordern der IP\n");
 				return EXIT_FAILURE;
 			}
 
@@ -143,13 +143,14 @@ int main(int argc, char *argv[]) {
 				return EXIT_FAILURE;
 			}
 			if (WIFEXITED(status) == 0) {
-				perror("\nKindprozess nicht korrekt terminiert");
+				printf("\nKindprozess nicht korrekt terminiert\n");
 				return EXIT_FAILURE;
 			}
+
 			// shm zerstören	
 			shmdt(shm);
 			if (delshm(shmID) == -1) {
-				printf("Fehler bei Zerstoerung von shm \n");
+				printf("\nFehler bei Zerstoerung von shm\n");
 			}
 			break;
 
