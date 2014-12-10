@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 	// Game-ID als Kommandozeilenparameter auslesen und überprüfen
 	if (argc < 2){
 		fprintf(stderr, "\nGame-ID nicht eingegeben\n");
-		return EXIT_FAILURE;
+		return EXIT_FAILURE; 
  	}
 	if (strlen(argv[1]) != 11) {
 		fprintf(stderr, "\nGame-ID nicht 11-stellig\n");
