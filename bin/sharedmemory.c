@@ -18,25 +18,20 @@ int initshm(int size) {
 }
 
 // Funktion zum binden des shm
-void bindshm(int shmID,shm* shmpointer) {
+struct shm* bindshm(int shmID) {
 
+	struct shm* shmpointer;
 	// shm binden
 	shmpointer = shmat(shmID,0,0);
-
-}
-
-void bindfeld(int feldID,spielfeld* shmpoint) {
-
-	// shm binden
-	shmpoint = shmat(feldID,0,0);
+	return shmpointer;
 
 }
 
 // Funktion zum Löschen des shm*
-int delshm(int ID) {
+int delshm(int shmID) {
 
 	int delete;
-	delete = shmctl(ID, IPC_RMID, NULL);
+	delete = shmctl(shmID, IPC_RMID, NULL);
 	return delete;
 
 }

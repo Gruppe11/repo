@@ -19,18 +19,8 @@ typedef struct shm {
 
 }shm;
 
-//struct für spielfeld
-typedef struct spielfeld {
-	
-	int anzsteine;
-	int feld[3][8];
-	
-
-}spielfeld;
-
 int initshm(int size);
-void bindshm(int shmID,shm* shmpointer);
-void bindfeld(int feldID,spielfeld* shmpoint);
-int delshm(int ID);
+struct shm* bindshm(int shmID);
+int delshm(int shmID);
 
 #endif

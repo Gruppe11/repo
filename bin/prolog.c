@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 	// Config-Datei einlesen und struct initialisieren
 	configstruct = get_config(conf_datei);
 
-	shm *shm = NULL;
+	shm *shm;
 	int shmID;
 	int shmSize = sizeof(shm);
 
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	/* SHM binden */
-	bindshm(shmID,shm);
+	shm = bindshm(shmID);
 
 	/* Im Fehler shm  -1 */
 	if (shm == (void *) -1) {
@@ -84,13 +84,7 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 	
-	if (delshm(shmID) == -1) {
-			
-			fprintf(stderr, "\nFehler bei Zerstoerung von shm\n");
-	
-	}
 
-	
 	/**
 	* zweiten Prozess erstellen
 	* Connector ist Kindprozess
@@ -140,8 +134,9 @@ int main(int argc, char *argv[]) {
 
 			// shm zerstören	
 			shmdt(shm);
-			
-			
+			if (delshm(shmID) == -1) {
+				fprintf(stderr, "\nFehler bei Zerstoerung von shm\n");
+			}
 			break;
 
 	}

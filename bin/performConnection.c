@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -123,9 +122,7 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 	// Flags zum eindeutigen Kommunikation miit Server
 	int phase = 0; // Flag zur Bestimmung der Phase
 	int capture = 0;  // Flag zum Capture Wert
-	//flag um zu wissen, ob feldshm schon erstellt wurde
-	int shmflag = 0;
-	spielfeld *spielfeld = NULL;
+
 
 
 	sock = getSock(configstruct);
@@ -134,7 +131,7 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 		getLine(sock, line); // Empfange Nachricht von Server
 
 		// gebe Servernachricht aus (für Debugging)
-		//printf("	S:%s\n", line);
+//		printf("	S:%s\n", line);
 
 		// Servernachricht verarbeiten
 		// Switch zwischen positiver/negativer Server Antwort
@@ -193,45 +190,23 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 						sscanf(line, "%*s %*s %d %[^\n]s", &temp2, temp1);
 						printf("Du (%s) bist Spieler #%d\n", temp1, temp2 + 1);			
 						shm->eigspielernummer = temp2+1;
-						
-						if(shm->eigspielernummer<1){
-							
-							printf("spielernummer ist kleiner 1");
-							return EXIT_FAILURE;
-						
-						}
-						
+						if(shm->eigspielernummer>0)
 						shm->spieleratt[shm->eigspielernummer-1].spielernummer = shm->eigspielernummer;	
 						strncpy(shm->spieleratt[shm->eigspielernummer-1].spielername,temp1,sizeof(shm->spieleratt[shm->eigspielernummer-1].spielername));	
 						shm->spieleratt[shm->eigspielernummer-1].regflag = 1;
 						getLine(sock, line); // nächste Zeile
 						sscanf(line, "%*s %*s %d", &temp2);
 						shm->anzahlspieler = temp2;
-						
-						if(shm->anzahlspieler < 1){
-							
-							printf("anzahlspieler ist kleiner 1");
-							return EXIT_FAILURE;
-						
-						}						
-						else if(shm->anzahlspieler > 8){
-						
-							printf("Die Anzahl der Spieler ist größer als 8");
-							return EXIT_FAILURE;
-						
-						}
 						getLine(sock, line); // nächste Zeile
 
 						// lese Gegner Spielervariablen ein + gebe diese aus
 						sscanf(line, "%*s %d", &temp2);
 						temp1 = strndup(line + 4, strlen(line) - 6);
 						temp3 = atoi(strndup(line + 5 + strlen(temp1), 1));
-						
 						if (temp3 == 1)
 							printf("Spieler #%d (%s) ist bereit\n\n", temp2 + 1, temp1);
 						else
 							printf("Spieler #%d (%s) ist noch nicht bereit\n", temp2 + 1, temp1);
-						
 						shm->spieleratt[temp2 ].spielernummer = temp2+1;	
 						strncpy(shm->spieleratt[temp2 ].spielername,temp1,sizeof(shm->spieleratt[temp2 ].spielername));	
 						shm->spieleratt[temp2 ].regflag = temp3;
@@ -258,62 +233,28 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 
 						// lese Zeit für Spielzug
 						sscanf(line, "%*s %*s %d", &temp2);
-					// temp2: Zeit für Spielzug
+// temp2: Zeit für Spielzug
 
 					} else if (strstr(line, "+ CAPTURE") != 0) {
 
 						// setze Capture Flag
 						sscanf(line, "%*s %*s %d", &temp2);
 						capture = temp2;
-					
-						
-					
+
 					} else if (strstr(line, "+ PIECELIST") != 0) {
 
 						// lese Anzahl Spieler/Steine pro Spieler
 						sscanf(line, "%*s %*s %d,%d", &temp2, &temp3);
-						// temp2: Anzahl Spieler
-						// temp3: Anzahl Steine pro Spieler
-						
-						if(shmflag==0){
-							//spieldfeld shm anlegen
-							
-							int feldID;
-							int shmSizefeld = sizeof(spielfeld);
+// temp2: Anzahl Spieler
+// temp3: Anzahl Steine pro Spieler
 
-							feldID = initshm(shmSizefeld);
-
-							if (feldID < 1) {
-								printf("No feld SHM\n");		
-								return EXIT_FAILURE;
-								}
-	
-							// SHM binden 
-							bindfeld(feldID,spielfeld);
-
-							// Im Fehler shm  -1 
-							if (spielfeld == (void *) -1) {
-								printf("Fehler binden feld shm\n");
-								return EXIT_FAILURE;
-							}
-							if (delshm(feldID) == -1) {
-			
-								fprintf(stderr, "\nFehler bei Zerstoerung von feldshm\n");
-	
-							}
-							
-							shmflag = 1;
-							
-						}
-						spielfeld->anzsteine = temp3;
-		
-		} else if (strstr(line, "+ PIECE") != 0) {
+					} else if (strstr(line, "+ PIECE") != 0) {
 
 						// lese Positionen der Steine
 						sscanf(line, "%*s PIECE%d.%d %s", &temp2, &temp3, temp1);
-						// temp2: Spielernummer
-					// temp3: Steinnummer
-					// temp1: Position des Steins
+// temp2: Spielernummer
+// temp3: Steinnummer
+// temp1: Position des Steins
 
 					} else if (strstr(line, "+ ENDPIECELIST") != 0) {
 
@@ -323,10 +264,10 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 
 					} else if (strstr(line, "+ OKTHINK") != 0) {
 
-					// Übergebe Information an Thinker
-					// Thinker
+// Übergebe Information an Thinker
+// Thinker
 
-					// solange noch kein Thinker aktiv: lese Spielzugeingabe und sende diese formatiert an den Server
+// solange noch kein Thinker aktiv: lese Spielzugeingabe und sende diese formatiert an den Server
 					if (capture == 0) printf("Setze einen Stein: ");
 					else if (capture == 1) printf("Entferne einen Stein des Gegners: ");
 						scanf("%s", temp1);
@@ -342,7 +283,7 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 							
 					} else if (strstr(line, "+ GAMEOVER") != 0) {
 
-				// evtl. Flag setzen für Ende, da Vergleich "+ ENDPIECELIST" sonst nicht eindeutig
+// evtl. Flag setzen für Ende, da Vergleich "+ ENDPIECELIST" sonst nicht eindeutig
 
 					}
 
