@@ -64,8 +64,8 @@ int main(int argc, char *argv[]) {
 	// Config-Datei einlesen und struct initialisieren
 	configstruct = get_config(conf_datei);
 
-	shm *shm;
-	int shmID;
+	shm* shm = malloc(sizeof(shm));
+	int shmID = 0;
 	int shmSize = sizeof(shm);
 
 	shmID = initshm(shmSize);
@@ -74,17 +74,23 @@ int main(int argc, char *argv[]) {
 		printf("No SHM\n");		
 		return EXIT_FAILURE;
 	}
-	
-	/* SHM binden */
-	shm = bindshm(shmID);
 
-	/* Im Fehler shm  -1 */
+	/* SHM binden */
+	bindshm(shmID, shm);
+
+	/* Im Fehler shm -1 */
 	if (shm == (void *) -1) {
 		printf("Fehler binden shm");
 		return EXIT_FAILURE;
 	}
 	
+	if (delshm(shmID) == -1) {
+			
+		fprintf(stderr, "\nFehler bei Zerstoerung von shm\n");
+	
+	}
 
+	
 	/**
 	* zweiten Prozess erstellen
 	* Connector ist Kindprozess
@@ -102,10 +108,10 @@ int main(int argc, char *argv[]) {
 		// Connector
 		case 0:
 
-			printf("\nKindprozess Connector beginnt:\n");		
-			
+			printf("\nKindprozess Connector beginnt:\n");
+
 			shm->connectorpid = pid;
-			
+
 			/* Verbindung zu Gameserver aufbauen */
 
 			// Prologphase der Kommunikation mit dem Server durchführen und testen
@@ -119,9 +125,9 @@ int main(int argc, char *argv[]) {
 	
 		// Thinker
 		default: 
-				
-				shm->thinkerpid = pid;
-			
+
+			shm->thinkerpid = pid;
+
 			// Warten bis Kindprozess Connector fertig
 			if (wait(&status) == -1) {
 				perror("\nFehler beim Warten auf Kindprozess");
@@ -134,9 +140,8 @@ int main(int argc, char *argv[]) {
 
 			// shm zerstören	
 			shmdt(shm);
-			if (delshm(shmID) == -1) {
-				fprintf(stderr, "\nFehler bei Zerstoerung von shm\n");
-			}
+			
+			
 			break;
 
 	}

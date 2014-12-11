@@ -5,7 +5,7 @@
 #include <sys/shm.h>
 #include "sharedmemory.h"
 
-/* Implementierung der Shared Memory */
+/* Implementierung des Shared Memory */
 
 // shm anlegen
 int initshm(int size) {
@@ -17,35 +17,26 @@ int initshm(int size) {
 
 }
 
-// Funktion zum binden des shm
-struct shm* bindshm(int shmID) {
+// Funktion zum Binden des shm
+void bindshm(int shmID, shm* shmpointer) {
 
-	struct shm* shmpointer;
 	// shm binden
 	shmpointer = shmat(shmID,0,0);
-	return shmpointer;
+
+}
+
+void bindfeld(int feldID, spielfeld* shmpointer) {
+
+	// shm binden
+	shmpointer = shmat(feldID,0,0);
 
 }
 
 // Funktion zum Löschen des shm*
-int delshm(int shmID) {
+int delshm(int ID) {
 
 	int delete;
-	delete = shmctl(shmID, IPC_RMID, NULL);
+	delete = shmctl(ID, IPC_RMID, NULL);
 	return delete;
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

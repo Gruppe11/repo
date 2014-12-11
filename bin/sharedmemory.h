@@ -2,7 +2,7 @@
 #define shmstruct
 
 // struct für die allgemeinen Infos
-typedef struct shm {
+typedef struct {
 
 	int thinkerpid;
 	int connectorpid;
@@ -14,13 +14,22 @@ typedef struct shm {
 	struct spieleratt {
 		int spielernummer; // wie lang Spielernummer
 		char spielername[128];
-		int regflag; //flag: 1=ja 0=nein
+		int regflag; // flag: 1=ja 0=nein
 	} spieleratt[8]; // im Moment für 2 Spieler: spieleratt[2]
 
-}shm;
+} shm;
+
+//struct für spielfeld
+typedef struct {
+	
+	int anzsteine;
+	int feld[3][8];
+	
+} spielfeld;
 
 int initshm(int size);
-struct shm* bindshm(int shmID);
-int delshm(int shmID);
+void bindshm(int shmID, shm* shmpointer);
+void bindfeld(int feldID, spielfeld* shmpointer);
+int delshm(int ID);
 
 #endif
