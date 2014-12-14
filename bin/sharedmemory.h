@@ -22,6 +22,7 @@ typedef struct {
 //struct für spielfeld
 typedef struct {
 	
+	int zuschlagendesteine;
 	int anzsteine;
 	int feld[3][8];
 	

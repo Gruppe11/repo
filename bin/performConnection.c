@@ -11,6 +11,7 @@
 #include "sharedmemory.h"
 #include "performConnection.h"
 #include "config.h"
+#include "spielfeldausgabe.h"
 #define BUFFR 512
 #define MAXGAMENAME 50
 
@@ -270,14 +271,7 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 						// setze Capture Flag
 						sscanf(line, "%*s %*s %d", &temp2);
 						capture = temp2;
-
-					} else if (strstr(line, "+ PIECELIST") != 0) {
-
-						// lese Anzahl Spieler/Steine pro Spieler
-						sscanf(line, "%*s %*s %d,%d", &temp2, &temp3);
-						// temp2: Anzahl Spieler
-						// temp3: Anzahl Steine pro Spieler
-
+					
 						if (shmflag == 0) {
 
 							// Spielfeld shm anlegen
@@ -311,9 +305,21 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 							}
 
 							shmflag = 1;
-
+							
+						
 						}
+						spielfeldleeren(spielfeld);
+						spielfeld->zuschlagendesteine = temp2;
+				
+					} else if (strstr(line, "+ PIECELIST") != 0) {
 
+						// lese Anzahl Spieler/Steine pro Spieler
+						sscanf(line, "%*s %*s %d,%d", &temp2, &temp3);
+						// temp2: Anzahl Spieler
+						// temp3: Anzahl Steine pro Spieler
+
+						
+						
 						spielfeld->anzsteine = temp3;
 
 					} else if (strstr(line, "+ PIECE") != 0) {
@@ -323,13 +329,16 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 						// temp2: Spielernummer
 						// temp3: Steinnummer
 						// temp1: Position des Steins
+						steinespeichern(temp2, temp1,spielfeld);
 
 					} else if (strstr(line, "+ ENDPIECELIST") != 0) {
 
 						// sende "THINKING"
 						sprintf(clientMessage, "THINKING\n");
 						sendMessage(sock, clientMessage);
-
+						
+						printspielfeld(spielfeld);
+					
 					} else if (strstr(line, "+ OKTHINK") != 0) {
 
 						// Übergebe Information an Thinker
