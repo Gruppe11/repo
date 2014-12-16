@@ -272,6 +272,20 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 						sscanf(line, "%*s %*s %d", &temp2);
 						capture = temp2;
 					
+						
+						
+						
+						if (shmflag == 1) {
+							spielfeld->zuschlagendesteine = temp2;
+						}
+					
+					} else if (strstr(line, "+ PIECELIST") != 0) {
+
+						// lese Anzahl Spieler/Steine pro Spieler
+						sscanf(line, "%*s %*s %d,%d", &temp2, &temp3);
+						// temp2: Anzahl Spieler
+						// temp3: Anzahl Steine pro Spieler
+						
 						if (shmflag == 0) {
 
 							// Spielfeld shm anlegen
@@ -308,18 +322,8 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 							
 						
 						}
+						
 						spielfeldleeren(spielfeld);
-						spielfeld->zuschlagendesteine = temp2;
-				
-					} else if (strstr(line, "+ PIECELIST") != 0) {
-
-						// lese Anzahl Spieler/Steine pro Spieler
-						sscanf(line, "%*s %*s %d,%d", &temp2, &temp3);
-						// temp2: Anzahl Spieler
-						// temp3: Anzahl Steine pro Spieler
-
-						
-						
 						spielfeld->anzsteine = temp3;
 
 					} else if (strstr(line, "+ PIECE") != 0) {
