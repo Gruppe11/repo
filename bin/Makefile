@@ -2,8 +2,8 @@ CFLAGS = -g -Wall -Werror -std=gnu99
 
 
 
-prog: performConnection.o prolog.o config.o sharedmemory.o spielfeldausgabe.o
-	gcc $(CFLAGS) -o client prolog.o performConnection.o config.o sharedmemory.o spielfeldausgabe.o
+prog: performConnection.o prolog.o config.o sharedmemory.o spielfeldausgabe.o thinker.o
+	gcc $(CFLAGS) -o client prolog.o performConnection.o config.o sharedmemory.o spielfeldausgabe.o thinker.o
 
 
 sharedmemory.o: sharedmemory.c sharedmemory.h
@@ -16,5 +16,7 @@ config.o: config.c config.h
 	gcc $(CFLAGS) -c config.c
 spielfeldausgabe.o: spielfeldausgabe.c spielfeldausgabe.h
 	gcc $(CFLAGS) -c spielfeldausgabe.c
+thinker.o: thinker.c thinker.h
+	gcc $(CFLAGS) -c thinker.c
 clean:
 	rm -f client prog1 *.o

@@ -14,6 +14,7 @@
 #include "sharedmemory.h"
 #include "performConnection.h"
 #include "config.h"
+#include "thinker.h"
 
 
 /**
@@ -30,15 +31,22 @@
 #define GAMEKINDNAME "NMMOrris"
 #define VERSION "1.0"
 
+//void handler(int sig);
+/* Signalhandler zum unterbrechen von pause(); */
+void handler(int sig) {
+	if (sig == SIGUSR1) {
+		signal(SIGUSR1, handler);	
+	}	
+} 
 
 int main(int argc, char *argv[]) {
 
 	char game_id[11];
-	int status;
+	//int status;
 	int fd[2]; // für Pipe
 	pid_t pid;
 	char* conf_datei = malloc(256);
-
+	int spielfeld_flag = 0;
 
 	// Game-ID als Kommandozeilenparameter auslesen und überprüfen
 	if (argc < 2){
@@ -64,9 +72,9 @@ int main(int argc, char *argv[]) {
 	// Config-Datei einlesen und struct initialisieren
 	configstruct = get_config(conf_datei);
 
-	shm* shm = malloc(sizeof(shm));
+	SharedMem* shm = malloc(sizeof(SharedMem));
 	int shmID = 0;
-	int shmSize = sizeof(shm);
+	int shmSize = sizeof(SharedMem);
 
 	shmID = initshm(shmSize);
 
@@ -76,7 +84,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* SHM binden */
-	bindshm(shmID, shm);
+	shm = (SharedMem*) attachshm(shmID);
 
 	/* Im Fehler shm -1 */
 	if (shm == (void *) -1) {
@@ -89,8 +97,18 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "\nFehler bei Zerstoerung von shm\n");
 	
 	}
-
 	
+	
+	/* 
+	** Pipe erzeugen
+	** fd[0] zum Lesen
+	** fd[1] zu Schreiben
+	*/
+	if (pipe(fd) < 0) {
+		fprintf(stderr, "Fehler beim erzeugen der Pipe");
+		return EXIT_FAILURE;
+	}
+
 	/**
 	* zweiten Prozess erstellen
 	* Connector ist Kindprozess
@@ -107,15 +125,19 @@ int main(int argc, char *argv[]) {
 
 		// Connector
 		case 0:
-
+			/* Schreibseite im Connector schließen */
+			close(fd[1]);
+	
 			printf("\nKindprozess Connector beginnt:\n");
 
 			shm->connectorpid = pid;
 
+			
+
 			/* Verbindung zu Gameserver aufbauen */
 
 			// Prologphase der Kommunikation mit dem Server durchführen und testen
-			if (performConnection(VERSION, game_id, fd, shm) != 0) {
+			if (performConnection(VERSION, game_id, shm, fd[0]) != 0) {
 				fprintf(stderr, "\nSocket geschlossen\n");
 				return EXIT_FAILURE;
 			}
@@ -124,20 +146,30 @@ int main(int argc, char *argv[]) {
 			break;
 	
 		// Thinker
-		default: 
-
+		default:
+			/* Leseseite im Connector schließen */
+			close(fd[0]);
+			Spielfeldshm * spielfeld;
 			shm->thinkerpid = pid;
 
-			// Warten bis Kindprozess Connector fertig
-			if (wait(&status) == -1) {
-				perror("\nFehler beim Warten auf Kindprozess");
-				return EXIT_FAILURE;
-			}
-			if (WIFEXITED(status) == 0) {
-				fprintf(stderr, "\nKindprozess nicht korrekt terminiert\n");
-				return EXIT_FAILURE;
-			}
+			//Signalhandler
+			if(signal(SIGUSR1, handler) == SIG_ERR) {
+        			printf("Parent: Unable to create handler for SIGUSR1\n");
+   			}
 
+			// Schleife, damit Elternprozess nicht nach einmal thinken beendet
+			while(1) {
+				// Warten aus SIGUSR1
+				pause();
+				if(spielfeld_flag == 0) {
+					spielfeld = (Spielfeldshm*) attachshm(shm->fieldID);
+					spielfeld_flag = 1;
+				}
+				printf("Es wird gedacht!\n");
+				// Ruft think() in thinker.c auf
+				think(fd[1], shm, spielfeld);
+			}
+			
 			// shm zerstören	
 			shmdt(shm);
 			
@@ -150,3 +182,5 @@ int main(int argc, char *argv[]) {
 	return EXIT_SUCCESS;
 
 }
+
+

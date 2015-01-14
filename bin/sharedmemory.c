@@ -18,17 +18,12 @@ int initshm(int size) {
 }
 
 // Funktion zum Binden des shm
-void bindshm(int shmID, shm* shmpointer) {
+void* attachshm(int shmID) {
 
 	// shm binden
+	void* shmpointer;
 	shmpointer = shmat(shmID,0,0);
-
-}
-
-void bindfeld(int feldID, spielfeld* shmpointer) {
-
-	// shm binden
-	shmpointer = shmat(feldID,0,0);
+	return shmpointer;
 
 }
 

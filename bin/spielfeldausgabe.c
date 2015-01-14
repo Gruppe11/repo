@@ -12,7 +12,7 @@
 
 
 
-void spielfeldleeren(spielfeld * spielfeld){
+void spielfeldleeren(Spielfeldshm * spielfeld){
 	int i;
 	int j;
 	
@@ -28,7 +28,7 @@ void spielfeldleeren(spielfeld * spielfeld){
 
 
 }
-int getzahl( char Buchstabe){
+int getzahl(char Buchstabe){
 
 	switch(Buchstabe) {
 		case 'A': return 0; 
@@ -40,7 +40,7 @@ int getzahl( char Buchstabe){
 
 }
 
-void steinespeichern(int spielernummer, char * position,spielfeld * spielfeld){
+void steinespeichern(int spielernummer, char * position, Spielfeldshm * spielfeld){
 	
 	
 	if(strlen(position)>1){
@@ -125,7 +125,7 @@ void zeichenform(int zeichen, char pos){
 	}
 
 }
-void printspielfeld(spielfeld * spielfeld){
+void printspielfeld(Spielfeldshm * spielfeld){
 
 printf("Capture %i piece\n",spielfeld->zuschlagendesteine);
 

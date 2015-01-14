@@ -4,11 +4,13 @@
 // struct für die allgemeinen Infos
 typedef struct {
 
+	int think_flag; //Flag ob thinker neuen Spielzug berechnen darf
 	int thinkerpid;
 	int connectorpid;
 	int anzahlspieler;
 	int eigspielernummer;
 	char spielname[60]; // wie lang ist der Gamename maximal?
+	int fieldID;
 
 	// struct für die Spielereigenschaften
 	struct spieleratt {
@@ -17,20 +19,19 @@ typedef struct {
 		int regflag; // flag: 1=ja 0=nein
 	} spieleratt[8]; // im Moment für 2 Spieler: spieleratt[2]
 
-} shm;
+} SharedMem;
 
 //struct für spielfeld
 typedef struct {
-	
 	int zuschlagendesteine;
+	int steineverfuegbar;
 	int anzsteine;
 	int feld[3][8];
 	
-} spielfeld;
+} Spielfeldshm;
 
 int initshm(int size);
-void bindshm(int shmID, shm* shmpointer);
-void bindfeld(int feldID, spielfeld* shmpointer);
+void* attachshm(int shmID);
 int delshm(int ID);
 
 #endif

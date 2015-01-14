@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -7,6 +6,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <netdb.h>
+#include <limits.h>
 #include <netinet/in.h>
 #include "sharedmemory.h"
 #include "performConnection.h"
@@ -110,24 +110,26 @@ int getSock(struct config configS) {
  * game_id: Game ID des Spiels
  * fd: Pipe für ???
  */
-int performConnection(char* version, char* game_id, int fd[],shm * shm) {
+int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead) {
 
 	char* line = malloc(sizeof(char) * BUFFR);
 	char clientMessage[BUFFR];
 	char* errorMessage;
 	int sock;
+	char pipe_read[PIPE_BUF];
 
 	// Temporärer Speicher für das Auslesen von Variablen aus den Serverantworten
 	char* temp1 = malloc(sizeof(char) * 20);
 	int temp2;
 	int temp3;
 
-	// Flags zum eindeutigen Kommunikation miit Server
+	// Flags zum eindeutigen Kommunikation mit Server
 	int phase = 0; // Flag zur Bestimmung der Phase
 	int capture = 0; // Flag zum Capture Wert
 	//flag um zu wissen, ob feldshm schon erstellt wurde
 	int shmflag = 0;
-	spielfeld *spielfeld = malloc(sizeof(spielfeld));
+	Spielfeldshm *spielfeld = malloc(sizeof(Spielfeldshm));
+	shm->think_flag = 10;
 
 
 
@@ -289,12 +291,12 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 						if (shmflag == 0) {
 
 							// Spielfeld shm anlegen
-							int feldID;
+							int fieldID;
 							int shmSizefeld = sizeof(spielfeld);
 
-							feldID = initshm(shmSizefeld);
+							fieldID = initshm(shmSizefeld);
 
-							if (feldID < 1) {
+							if (fieldID < 1) {
 
 								printf("No feld SHM\n");		
 								return EXIT_FAILURE;
@@ -302,7 +304,7 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 							}
 
 							// SHM binden 
-							bindfeld(feldID, spielfeld);
+							spielfeld = (Spielfeldshm*) attachshm(fieldID);
 
 							// Im Fehler shm -1 
 							if (spielfeld == (void *) -1) {
@@ -312,12 +314,14 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 
 							}
 
-							if (delshm(feldID) == -1) {
+							if (delshm(fieldID) == -1) {
 
 								fprintf(stderr, "\nFehler bei Zerstoerung von feldshm\n");
 
 							}
 
+							shm->fieldID = fieldID;
+							spielfeld->steineverfuegbar = 9;
 							shmflag = 1;
 							
 						
@@ -344,26 +348,33 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 						printspielfeld(spielfeld);
 					
 					} else if (strstr(line, "+ OKTHINK") != 0) {
+						// Flag zur Überprüfung ob Thinker thinken darf (noch zu implementieren) 
+						shm->think_flag = 1;
+						printf("think_flag connector: %i\n", shm->think_flag);
 
+						// Sende Signal SIGUSR1
+						kill(getppid(), SIGUSR1);
+						
 						// Übergebe Information an Thinker
 						// Thinker
+						printf("Capture: %i\n", capture);
 
-						// solange noch kein Thinker aktiv: lese Spielzugeingabe und sende diese formatiert an den Server
-						if (capture == 0) {
 
-							printf("Setze einen Stein: ");
-
-						} else if (capture == 1) {
-
-							printf("Entferne einen Stein des Gegners: ");
+						while(shm->think_flag == 1) {
 
 						}
 
-						scanf("%s", temp1);
-						sprintf(clientMessage, "PLAY %s\n", temp1);
 
+						if (shm->think_flag == 0){
+							read(pipeRead, pipe_read, PIPE_BUF);
+
+						sprintf(clientMessage, "PLAY %s\n", pipe_read);
+						
+						//printf("Pipe: %s\n", pipe_read);
+						//printf("clientmassage: %s\n", clientMessage);
+						
 						// sende Spielzug
-						sendMessage(sock, clientMessage);
+						sendMessage(sock, clientMessage);}
 
 					} else if (strstr(line, "+ MOVEOK") != 0) {
 
@@ -403,8 +414,8 @@ int performConnection(char* version, char* game_id, int fd[],shm * shm) {
 				} else {
 					fprintf(stderr, "\nUnerwarteter Serverfehler: %s\n", errorMessage);
 				}
-
-				return EXIT_FAILURE;
+				
+				exit (EXIT_FAILURE);
 
 			// default: ist das überhaupt nötig?
 			default:
