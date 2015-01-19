@@ -130,6 +130,7 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 	int shmflag = 0;
 	Spielfeldshm *spielfeld = malloc(sizeof(Spielfeldshm));
 	shm->think_flag = 10;
+	int quitflag = 0;
 
 
 
@@ -340,11 +341,12 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 						steinespeichern(temp2, temp1,spielfeld);
 
 					} else if (strstr(line, "+ ENDPIECELIST") != 0) {
-
-						// sende "THINKING"
-						sprintf(clientMessage, "THINKING\n");
-						sendMessage(sock, clientMessage);
 						
+						if(quitflag ==0){
+							// sende "THINKING"
+							sprintf(clientMessage, "THINKING\n");
+							sendMessage(sock, clientMessage);
+						}
 						printspielfeld(spielfeld);
 					
 					} else if (strstr(line, "+ OKTHINK") != 0) {
@@ -383,10 +385,16 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 
 					} else if (strstr(line, "+ GAMEOVER") != 0) {
 
-						// evtl. Flag setzen für Ende, da Vergleich "+ ENDPIECELIST" sonst nicht eindeutig
-
+						sscanf(line, "%*s GAMEOVER%d %s", &temp2, temp1);
+						printf("Gameover! Spieler %d (%s) hat gewonnen\n", temp2 + 1,temp1);
+						quitflag = 1;
 					}
+					  else if (strstr(line, "+ QUIT") != 0) {
 
+						printf("Verbindung wird abgebaut");
+						
+						return EXIT_FAILURE;
+					}
 				}
 
 				break;
