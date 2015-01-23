@@ -36,6 +36,9 @@
 void handler(int sig) {
 	if (sig == SIGUSR1) {
 		signal(SIGUSR1, handler);	
+	}
+	if (sig == SIGUSR2) {
+		exit(EXIT_SUCCESS);
 	}	
 } 
 
@@ -45,6 +48,7 @@ int main(int argc, char *argv[]) {
 	//int status;
 	int fd[2]; // für Pipe
 	pid_t pid;
+	//pid_t child1;
 	char* conf_datei = malloc(256);
 	int spielfeld_flag = 0;
 
@@ -139,10 +143,11 @@ int main(int argc, char *argv[]) {
 			// Prologphase der Kommunikation mit dem Server durchführen und testen
 			if (performConnection(VERSION, game_id, shm, fd[0]) != 0) {
 				fprintf(stderr, "\nSocket geschlossen\n");
-				return EXIT_FAILURE;
+				//return EXIT_FAILURE;
 			}
 
 			free(conf_datei);
+			exit(1);
 			break;
 	
 		// Thinker
@@ -151,29 +156,35 @@ int main(int argc, char *argv[]) {
 			close(fd[0]);
 			Spielfeldshm * spielfeld;
 			shm->thinkerpid = pid;
-
+			//pid = wait(&status);
 			//Signalhandler
 			if(signal(SIGUSR1, handler) == SIG_ERR) {
         			printf("Parent: Unable to create handler for SIGUSR1\n");
    			}
+			if(signal(SIGUSR2, handler) == SIG_ERR) {
+        			printf("Parent: Unable to create handler for SIGUSR2\n");
+   			}
 
 			// Schleife, damit Elternprozess nicht nach einmal thinken beendet
 			while(1) {
+				/*if(WIFEXITED(status) !=0) {
+					printf("jojojojo\n");
+				}*/
 				// Warten aus SIGUSR1
 				pause();
 				if(spielfeld_flag == 0) {
 					spielfeld = (Spielfeldshm*) attachshm(shm->fieldID);
 					spielfeld_flag = 1;
 				}
-				printf("Es wird gedacht!\n");
 				// Ruft think() in thinker.c auf
 				think(fd[1], shm, spielfeld);
+				
 			}
 			
 			// shm zerstören	
 			shmdt(shm);
 			
-			
+			//wait(NULL);
 			break;
 
 	}

@@ -78,7 +78,7 @@ int getSock(struct config configS) {
 	
 	// Hostname in IP Adresse übersetzen
 	struct hostent* ip = gethostbyname(configS.hostname);
-	//printf("IP: %s\n", ip->h_name);
+
 	if (ip == NULL) {
 		fprintf(stderr, "\nFehler beim Anfordern der IP\n");
 		return EXIT_FAILURE;
@@ -88,11 +88,9 @@ int getSock(struct config configS) {
 	memcpy(&(host.sin_addr), ip->h_addr_list[0], ip->h_length);
 	host.sin_family = AF_INET;
 	host.sin_port = htons(configS.portnumber);
-	//printf("SIN_PORT: %i\n", host.sin_port);
 
 	// Verbindung aufbauen und überprüfen
 	sock = socket(AF_INET, SOCK_STREAM, 0);
-	//printf("SOCKET: %i\n", sock);
 	if (connect(sock, (struct sockaddr*) &host, sizeof(host)) == 0) {
 		printf("\nVerbindung hergestellt!\n");
 	} else {
@@ -125,7 +123,6 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 
 	// Flags zum eindeutigen Kommunikation mit Server
 	int phase = 0; // Flag zur Bestimmung der Phase
-	int capture = 0; // Flag zum Capture Wert
 	//flag um zu wissen, ob feldshm schon erstellt wurde
 	int shmflag = 0;
 	Spielfeldshm *spielfeld = malloc(sizeof(Spielfeldshm));
@@ -273,11 +270,7 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 
 						// setze Capture Flag
 						sscanf(line, "%*s %*s %d", &temp2);
-						capture = temp2;
 					
-						
-						
-						
 						if (shmflag == 1) {
 							spielfeld->zuschlagendesteine = temp2;
 						}
@@ -352,28 +345,16 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 					} else if (strstr(line, "+ OKTHINK") != 0) {
 						// Flag zur Überprüfung ob Thinker thinken darf (noch zu implementieren) 
 						shm->think_flag = 1;
-						printf("think_flag connector: %i\n", shm->think_flag);
 
 						// Sende Signal SIGUSR1
 						kill(getppid(), SIGUSR1);
 						
-						// Übergebe Information an Thinker
-						// Thinker
-						printf("Capture: %i\n", capture);
-
-
-						while(shm->think_flag == 1) {
-
-						}
-
+						while(shm->think_flag == 1) {}
 
 						if (shm->think_flag == 0){
 							read(pipeRead, pipe_read, PIPE_BUF);
 
 						sprintf(clientMessage, "PLAY %s\n", pipe_read);
-						
-						//printf("Pipe: %s\n", pipe_read);
-						//printf("clientmassage: %s\n", clientMessage);
 						
 						// sende Spielzug
 						sendMessage(sock, clientMessage);}
@@ -392,7 +373,8 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 					  else if (strstr(line, "+ QUIT") != 0) {
 
 						printf("Verbindung wird abgebaut");
-						
+				
+						kill(getppid(),SIGUSR2);						
 						return EXIT_FAILURE;
 					}
 				}
@@ -423,7 +405,7 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 					fprintf(stderr, "\nUnerwarteter Serverfehler: %s\n", errorMessage);
 				}
 				
-				exit (EXIT_FAILURE);
+				return EXIT_FAILURE;
 
 			// default: ist das überhaupt nötig?
 			default:
