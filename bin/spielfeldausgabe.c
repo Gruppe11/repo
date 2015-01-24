@@ -127,8 +127,6 @@ void zeichenform(int zeichen, char pos){
 }
 void printspielfeld(Spielfeldshm * spielfeld){
 
-printf("Capture %i piece\n",spielfeld->zuschlagendesteine);
-
 // erste Zeile
 zeichenform(spielfeld->feld[0][0],'G');
 printf("---------");

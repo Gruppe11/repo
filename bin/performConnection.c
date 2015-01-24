@@ -4,6 +4,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <signal.h>
 #include <netdb.h>
 #include <limits.h>
@@ -15,6 +17,7 @@
 #define BUFFR 512
 #define MAXGAMENAME 50
 
+extern int exit_flag;
 
 /**
  * String an Server senden
@@ -121,20 +124,35 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 	int temp2;
 	int temp3;
 
-	// Flags zum eindeutigen Kommunikation mit Server
-	int phase = 0; // Flag zur Bestimmung der Phase
-	//flag um zu wissen, ob feldshm schon erstellt wurde
+	/* Flags zum eindeutigen Kommunikation mit Server */
+	// Flag mit Phase, in der wir uns befinden
+	int phase = 0;
+	// Flag ob Spielfeldshm schon erstellt wurde
 	int shmflag = 0;
-	Spielfeldshm *spielfeld = malloc(sizeof(Spielfeldshm));
-	shm->think_flag = 10;
+	Spielfeldshm* spielfeld = malloc(sizeof(Spielfeldshm));
 	int quitflag = 0;
+
+	int spielfeldID;
+	int shmSizefeld;
 
 
 
 	sock = getSock(configstruct);
 
 	while (1) {
-		getLine(sock, line); // Empfange Nachricht von Server
+
+		// Empfange Nachricht von Server
+		getLine(sock, line);
+
+		/* Routine zum Beenden */
+		if (exit_flag == 2) {
+			// spielfeld entfernen + line, temp1 freigeben
+			shmdt(spielfeld);
+			free(line);
+			free(temp1);
+
+			return EXIT_FAILURE;
+		}
 
 		// gebe Servernachricht aus (für Debugging)
 		//printf("	S:%s\n", line);
@@ -196,14 +214,14 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 						sscanf(line, "%*s %*s %d %[^\n]s", &temp2, temp1);
 						printf("Du (%s) bist Spieler #%d\n", temp1, temp2 + 1); // Spielernummer nur für die Ausgabe +1 -> Nummern 1-8
 						shm->eigspielernummer = temp2;
-						
+
 						if (shm->eigspielernummer < 0) {
-							
+
 							fprintf(stderr, "\nFehler beim Erfassen der Spielernummer: Spielernummer < 0\n");
 							return EXIT_FAILURE;
-						
+
 						}
-						
+
 						shm->spieleratt[shm->eigspielernummer].spielernummer = shm->eigspielernummer;	
 						strncpy(shm->spieleratt[shm->eigspielernummer].spielername, temp1, sizeof(shm->spieleratt[shm->eigspielernummer].spielername));	
 						shm->spieleratt[shm->eigspielernummer].regflag = 1;
@@ -213,18 +231,18 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 						// lese Anzahl Spieler aus + speichern in shm
 						sscanf(line, "%*s %*s %d", &temp2);
 						shm->anzahlspieler = temp2;
-						
+
 						if (shm->anzahlspieler < 1) {
-							
+
 							fprintf(stderr, "\nFehler beim Erfassen der Spieleranzahl: Spieleranzahl < 1\n");
 							return EXIT_FAILURE;
-						
+
 						}						
 						else if (shm->anzahlspieler > 8) {
-						
+
 							fprintf(stderr, "\nFehler beim Erfassen der Spieleranzahl: Spieleranzahl > 8\n");
 							return EXIT_FAILURE;
-						
+
 						}
 						getLine(sock, line); // nächste Zeile
 
@@ -232,16 +250,16 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 						sscanf(line, "%*s %d", &temp2);
 						temp1 = strndup(line + 4, strlen(line) - 6);
 						temp3 = atoi(strndup(line + 5 + strlen(temp1), 1));
-						
+
 						if (temp3 == 1)
 							printf("Spieler #%d (%s) ist bereit\n\n", temp2 + 1, temp1); // Spielernummer nur für die Ausgabe +1 -> Nummern 1-8
 						else
 							printf("Spieler #%d (%s) ist noch nicht bereit\n\n", temp2 + 1, temp1); // Spielernummer nur für die Ausgabe +1 -> Nummern 1-8
-						
+
 						shm->spieleratt[temp2].spielernummer = temp2;	
 						strncpy(shm->spieleratt[temp2].spielername, temp1, sizeof(shm->spieleratt[temp2].spielername));	
 						shm->spieleratt[temp2].regflag = temp3;
-					
+
 					} else if (strstr(line, "+ ENDPLAYERS") != 0) {
 
 						// setze Flag für Spielverlaufsphase
@@ -268,57 +286,49 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 
 					} else if (strstr(line, "+ CAPTURE") != 0) {
 
-						// setze Capture Flag
+						// lese Capturewert
 						sscanf(line, "%*s %*s %d", &temp2);
-					
+
 						if (shmflag == 1) {
-							spielfeld->zuschlagendesteine = temp2;
+							// setze capture_flag
+							spielfeld->capture_flag = temp2;
 						}
-					
+
 					} else if (strstr(line, "+ PIECELIST") != 0) {
 
 						// lese Anzahl Spieler/Steine pro Spieler
 						sscanf(line, "%*s %*s %d,%d", &temp2, &temp3);
 						// temp2: Anzahl Spieler
 						// temp3: Anzahl Steine pro Spieler
-						
+
+						/* Spielfeld SHM */
 						if (shmflag == 0) {
 
-							// Spielfeld shm anlegen
-							int fieldID;
-							int shmSizefeld = sizeof(spielfeld);
+							// Spielfeld SHM anlegen
+							shmSizefeld = sizeof(spielfeld);
+							spielfeldID = initshm(shmSizefeld);
 
-							fieldID = initshm(shmSizefeld);
-
-							if (fieldID < 1) {
-
-								printf("No feld SHM\n");		
+							// Überprüfe spielfeldID
+							if (spielfeldID < 1) {
+								printf("Kein Spielfeld SHM vorhanden\n");
 								return EXIT_FAILURE;
-
 							}
 
-							// SHM binden 
-							spielfeld = (Spielfeldshm*) attachshm(fieldID);
+							// Spielfeld SHM binden 
+							spielfeld = (Spielfeldshm*) attachshm(spielfeldID);
 
-							// Im Fehler shm -1 
+							// Überprüfe Spielfeld SHM auf Fehler
 							if (spielfeld == (void *) -1) {
-
-								printf("Fehler binden feld shm\n");
+								printf("Fehler beim Binden des Spielfeld SHM\n");
 								return EXIT_FAILURE;
-
 							}
 
-							if (delshm(fieldID) == -1) {
-
-								fprintf(stderr, "\nFehler bei Zerstoerung von feldshm\n");
-
-							}
-
-							shm->fieldID = fieldID;
+							// Steineverfuegbar Anfangswert zuweisen
 							spielfeld->steineverfuegbar = 9;
+
+							shm->spielfeldID = spielfeldID;
 							shmflag = 1;
 							
-						
 						}
 						
 						spielfeldleeren(spielfeld);
@@ -331,33 +341,39 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 						// temp2: Spielernummer
 						// temp3: Steinnummer
 						// temp1: Position des Steins
-						steinespeichern(temp2, temp1,spielfeld);
+						steinespeichern(temp2, temp1, spielfeld);
 
 					} else if (strstr(line, "+ ENDPIECELIST") != 0) {
-						
+
 						if(quitflag ==0){
 							// sende "THINKING"
 							sprintf(clientMessage, "THINKING\n");
 							sendMessage(sock, clientMessage);
 						}
 						printspielfeld(spielfeld);
-					
+
 					} else if (strstr(line, "+ OKTHINK") != 0) {
+
 						// Flag zur Überprüfung ob Thinker thinken darf (noch zu implementieren) 
 						shm->think_flag = 1;
 
-						// Sende Signal SIGUSR1
+						// Sende Signal SIGUSR1 an Thinker
 						kill(getppid(), SIGUSR1);
-						
-						while(shm->think_flag == 1) {}
+
+						while (shm->think_flag == 1) {}
 
 						if (shm->think_flag == 0){
-							read(pipeRead, pipe_read, PIPE_BUF);
 
-						sprintf(clientMessage, "PLAY %s\n", pipe_read);
-						
-						// sende Spielzug
-						sendMessage(sock, clientMessage);}
+							if (read(pipeRead, pipe_read, PIPE_BUF) == -1) {
+								perror("\nFehler beim Lesen aus der Pipe");
+								return EXIT_FAILURE;
+							}
+
+							sprintf(clientMessage, "PLAY %s\n", pipe_read);
+
+							// sende Spielzug
+							sendMessage(sock, clientMessage);
+						}
 
 					} else if (strstr(line, "+ MOVEOK") != 0) {
 
@@ -372,10 +388,10 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 					}
 					  else if (strstr(line, "+ QUIT") != 0) {
 
-						printf("Verbindung wird abgebaut");
+						printf("Verbindung wird abgebaut\n");
 				
 						kill(getppid(),SIGUSR2);						
-						return EXIT_FAILURE;
+						return EXIT_SUCCESS;
 					}
 				}
 
@@ -412,9 +428,7 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 
 				fprintf(stderr, "\nServernachricht kann nicht verarbeitet werden\n");
 				return EXIT_FAILURE;
-			}
+
+		}
 	}
-
-	return EXIT_SUCCESS;
-
 }

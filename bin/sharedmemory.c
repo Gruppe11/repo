@@ -27,7 +27,7 @@ void* attachshm(int shmID) {
 
 }
 
-// Funktion zum Löschen des shm*
+// Funktion zum Löschen des shm
 int delshm(int ID) {
 
 	int delete;
