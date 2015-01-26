@@ -3,7 +3,7 @@
 
 #define BUFFR 512
 
-// char[] Datentyp für portnumber sollte laut Aufgabenstellung anders sein
+
 struct config {
 	char hostname[BUFFR];
 	int portnumber;

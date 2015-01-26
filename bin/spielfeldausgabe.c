@@ -127,6 +127,8 @@ void zeichenform(int zeichen, char pos){
 }
 void printspielfeld(Spielfeldshm * spielfeld){
 
+printf("Capture %d piece\n",spielfeld->capture_flag);
+
 // erste Zeile
 zeichenform(spielfeld->feld[0][0],'G');
 printf("---------");

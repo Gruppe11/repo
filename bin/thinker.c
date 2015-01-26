@@ -13,9 +13,10 @@
 #include "thinker.h"
 #define BUFFR 1024
 
+/* Implementierung des Thinkers  */
+
 void SetorDelete(char* nextMove, SharedMem* shm, Spielfeldshm* spielfeld, int availableFlag) {
 
-    //printspielfeld(spielfeld);
 	srand(time(NULL));
 	int i = rand() % 3;
 	int j = rand() % 8;
@@ -51,7 +52,6 @@ void SetorDelete(char* nextMove, SharedMem* shm, Spielfeldshm* spielfeld, int av
 	sprintf(secondIndex, "%d", j);
 	strcat(nextMove, secondIndex);
 
-    printf("noch %d Steine\n",spielfeld->steineverfuegbar);
 
     free(secondIndex);
 
@@ -59,7 +59,6 @@ void SetorDelete(char* nextMove, SharedMem* shm, Spielfeldshm* spielfeld, int av
 
 void thinkMove(char* nextMove, SharedMem* shm, Spielfeldshm* spielfeld) {
 
-	printf("think move\n");
 	srand(time(NULL));
 	int i;
 	int j;

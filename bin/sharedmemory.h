@@ -4,19 +4,19 @@
 // struct für die allgemeinen Infos
 typedef struct {
 
-	int think_flag; // Flag ob thinker neuen Spielzug berechnen darf
+	int think_flag; 
 	int thinkerpid;
 	int connectorpid;
 	int anzahlspieler;
 	int eigspielernummer;
-	char spielname[60]; // wie lang ist der Gamename maximal?
+	char spielname[60]; 
 	int spielfeldID;
 
 	// struct für die Spielereigenschaften
 	struct spieleratt {
-		int spielernummer; // wie lang Spielernummer
+		int spielernummer; 
 		char spielername[128];
-		int regflag; // Flag: 1=ja 0=nein
+		int regflag; 
 	} spieleratt[8];
 
 } SharedMem;

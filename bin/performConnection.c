@@ -109,7 +109,7 @@ int getSock(struct config configS) {
  * sock: Socket des Servers
  * version: Version des Clients
  * game_id: Game ID des Spiels
- * fd: Pipe für ???
+ * pipeRead für die pipe
  */
 int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead) {
 
@@ -153,9 +153,6 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 
 			return EXIT_FAILURE;
 		}
-
-		// gebe Servernachricht aus (für Debugging)
-		//printf("	S:%s\n", line);
 
 		// Servernachricht verarbeiten
 		// Switch zwischen positiver/negativer Server Antwort
@@ -423,7 +420,7 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 				
 				return EXIT_FAILURE;
 
-			// default: ist das überhaupt nötig?
+			// default
 			default:
 
 				fprintf(stderr, "\nServernachricht kann nicht verarbeitet werden\n");

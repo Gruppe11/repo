@@ -22,11 +22,6 @@
  */
 
 
-// Zur Verbindung nötige Konstanten deklarieren
-// -> sind jetz in client.conf
-	//#define PORTNUMBER 1357
-	//#define HOSTNAME "sysprak.priv.lab.nm.ifi.lmu.de"
-// String-Konstanten evtl. als const char hostname[] deklarieren?
 #define GAMEKINDNAME "NMMOrris"
 #define VERSION "1.0"
 
@@ -49,10 +44,9 @@ void prologHandler(int sig) {
 int main(int argc, char *argv[]) {
 
 	char game_id[11];
-	//int status;
 	int fd[2]; // für Pipe
 	pid_t pid;
-	//pid_t child1;
+
 	char* conf_datei = malloc(256);
 
 	int spielfeld_flag = 0;
@@ -172,7 +166,6 @@ int main(int argc, char *argv[]) {
 			// Leseseite im Connector schließen
 			close(fd[0]);
 			shm->thinkerpid = pid;
-			//pid = wait(&status);
 
 			// Signalhandler
 			if (signal(SIGUSR1, prologHandler) == SIG_ERR) {
@@ -185,9 +178,6 @@ int main(int argc, char *argv[]) {
 			// Schleife, damit Elternprozess nicht nach einmal thinken beendet
 			while(1) {
 
-				/*if(WIFEXITED(status) != 0) {
-					printf("jojojojo\n");
-				}*/
 
 				// Warten auf SIGUSR1
 				pause();
