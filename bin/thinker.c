@@ -13,8 +13,7 @@
 #include "thinker.h"
 #define BUFFR 1024
 
-/* Implementierung des Thinkers  */
-
+//Funktion zum Setzen oder Entfernen 
 void SetorDelete(char* nextMove, SharedMem* shm, Spielfeldshm* spielfeld, int availableFlag) {
 
 	srand(time(NULL));
@@ -26,15 +25,15 @@ void SetorDelete(char* nextMove, SharedMem* shm, Spielfeldshm* spielfeld, int av
 	bzero(secondIndex, BUFFR);
 
 	if (availableFlag) {
-    	while (spielfeld->feld[i][j] != -1) {
-    		i = rand() % 3;
-    		j = rand() % 8;
-   	   }
+    		while (spielfeld->feld[i][j] != -1) {
+    			i = rand() % 3;
+    			j = rand() % 8;
+   		}
 	} else {
-    	while ((spielfeld->feld[i][j] == -1) || (spielfeld->feld[i][j] == shm->eigspielernummer)) {
-       		i = rand() % 3;
-    		j = rand() % 8;
-        }
+    		while ((spielfeld->feld[i][j] == -1) || (spielfeld->feld[i][j] == shm->eigspielernummer)) {
+       			i = rand() % 3;
+    			j = rand() % 8;
+        	}
 	}
 
 	switch (i) {
@@ -52,9 +51,7 @@ void SetorDelete(char* nextMove, SharedMem* shm, Spielfeldshm* spielfeld, int av
 	sprintf(secondIndex, "%d", j);
 	strcat(nextMove, secondIndex);
 
-
-    free(secondIndex);
-
+    	free(secondIndex);
 }
 
 void thinkMove(char* nextMove, SharedMem* shm, Spielfeldshm* spielfeld) {
@@ -74,39 +71,38 @@ void thinkMove(char* nextMove, SharedMem* shm, Spielfeldshm* spielfeld) {
 		i = rand() % 3;
 		j = rand() % 8;
 		
-    	while (spielfeld->feld[i][j] != shm->eigspielernummer) {
-    		i = rand() % 3;
-        	j = rand() % 8;
-    	}
+    		while (spielfeld->feld[i][j] != shm->eigspielernummer) {
+    			i = rand() % 3;
+        		j = rand() % 8;
+    		}
 		
-    	if ((spielfeld->feld[i][j+1] == -1) && (j+1 < 8)) {
-    		iNeu = i;
-    		jNeu = j+1;
-    		break;
-    	}
+    		if ((spielfeld->feld[i][j+1] == -1) && (j+1 < 8)) {
+    			iNeu = i;
+    			jNeu = j+1;
+    			break;
+    		}
 		
-        if (j-1 > 0) {
+        	if (j-1 > 0) {
 			if (spielfeld->feld[i][j-1] == -1) {
 				iNeu = i;
-    			jNeu = j-1;
-    			break;
+    				jNeu = j-1;
+    				break;
 			}
-        }
+        	}
 	
-    	if ((spielfeld->feld[i+1][j] == -1) && (i+1 < 3) && (j == 1 || j == 3 || j == 5 || j == 7)) {
-    		iNeu = i+1;
-    		jNeu = j;
-    		break;
-    	}
-
-    	if (i-1 > 0) {
-    		if ((spielfeld->feld[i-1][j] == -1) && (j == 1 || j == 3 || j == 5 || j == 7)) {
-    			iNeu = i-1;
+    		if ((spielfeld->feld[i+1][j] == -1) && (i+1 < 3) && (j == 1 || j == 3 || j == 5 || j == 7)) {
+    			iNeu = i+1;
     			jNeu = j;
     			break;
     		}
-        }
 
+    		if (i-1 > 0) {
+    			if ((spielfeld->feld[i-1][j] == -1) && (j == 1 || j == 3 || j == 5 || j == 7)) {
+    				iNeu = i-1;
+    				jNeu = j;
+    				break;
+    			}
+        	}
 	}
 
 	switch (i) {
@@ -119,7 +115,7 @@ void thinkMove(char* nextMove, SharedMem* shm, Spielfeldshm* spielfeld) {
     	case 2:
     		strcat(nextMove, "C");
     		break;
-    }
+    	}
 
 	sprintf(tempString, "%d", j);
 	strcat(nextMove, tempString);
@@ -135,47 +131,43 @@ void thinkMove(char* nextMove, SharedMem* shm, Spielfeldshm* spielfeld) {
     	case 2:
         	strcat(nextMove, "C");
        		break;
-    }
+    	}
 	
 	sprintf(tempString, "%d", jNeu);
 	strcat(nextMove, tempString);
 
-    free(tempString);
-
+    	free(tempString);
 }
 
 int think(int pipeWrite, SharedMem* shm, Spielfeldshm* spielfeld) {
 
-    char* nextMove = malloc(sizeof(char) * BUFFR);
+	char* nextMove = malloc(sizeof(char) * BUFFR);
 	
-    bzero(nextMove, BUFFR);
+	bzero(nextMove, BUFFR);
 
-    if(spielfeld->capture_flag > 0) {
+	if(spielfeld->capture_flag > 0) {
 
-        SetorDelete(nextMove, shm, spielfeld, 0);
+        	SetorDelete(nextMove, shm, spielfeld, 0);
+	
+	} else if(spielfeld->steineverfuegbar >0) {
 
-    } else if(spielfeld->steineverfuegbar >0) {
+		SetorDelete(nextMove, shm, spielfeld, 1);
+		spielfeld->steineverfuegbar = spielfeld->steineverfuegbar - 1;
 
-        SetorDelete(nextMove, shm, spielfeld, 1);
+	} else {
 
-        spielfeld->steineverfuegbar = spielfeld->steineverfuegbar - 1;
+        	thinkMove(nextMove, shm, spielfeld);
+	}
 
-    } else {
+	printf("MOVE %s\n",nextMove);
 
-        thinkMove(nextMove, shm, spielfeld);
+	if (write(pipeWrite, nextMove, PIPE_BUF) == -1) {
+		perror("\nFehler beim Schreiben in die Pipe");
+		return EXIT_FAILURE;
+	}
 
-    }
+	shm->think_flag = 0;
 
-    printf("MOVE %s\n",nextMove);
-
-    if (write(pipeWrite, nextMove, PIPE_BUF) == -1) {
-        perror("\nFehler beim Schreiben in die Pipe");
-        return EXIT_FAILURE;
-    }
-
-    shm->think_flag = 0;
-
-    free(nextMove);
-    return EXIT_SUCCESS;
-
+	free(nextMove);
+	return EXIT_SUCCESS;
 }
