@@ -21,7 +21,6 @@
  * Kommunikation mit dem Gameserver
  */
 
-
 #define GAMEKINDNAME "NMMOrris"
 #define VERSION "1.0"
 
@@ -142,10 +141,8 @@ int main(int argc, char *argv[]) {
 			close(fd[1]);
 			shm->connectorpid = getpid();
 
-
-
 			/* Verbindung zu Gameserver aufbauen */
-
+			
 			// Prologphase der Kommunikation mit dem Server durchführen und testen
 			if (performConnection(VERSION, game_id, shm, fd[0]) != 0) {
 				fprintf(stderr, "\nSocket geschlossen\n");
@@ -177,8 +174,6 @@ int main(int argc, char *argv[]) {
 
 			// Schleife, damit Elternprozess nicht nach einmal thinken beendet
 			while(1) {
-
-
 				// Warten auf SIGUSR1
 				pause();
 
@@ -227,7 +222,6 @@ int main(int argc, char *argv[]) {
 				if (think(fd[1], shm, spielfeld) != 0) {
 					fprintf(stderr, "\nFehler beim Denkprozess\n");
 				}
-
 			}
 	}
 }
