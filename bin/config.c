@@ -7,9 +7,6 @@
 #define BUFFR 512
 #define TOKEN "="
 
-
-/* Fehlt eventuell Fehlerbehandlung?? */
-
 // Konfigurationsdaten von Konfigurationsdatei in configstruct einlesen
 struct config get_config(char *filename) {
 
