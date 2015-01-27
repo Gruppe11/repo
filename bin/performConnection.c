@@ -32,9 +32,7 @@ void sendMessage(int sock, char* clientMessage) {
 		perror("\nError beim Schreiben zum Socket");
 		exit(EXIT_FAILURE);
 	}
-
 }
-
 /**
  * Liest eine vollständige Nachricht (letztes Zeichen = '\n') von Server.
  *
@@ -70,7 +68,7 @@ void getLine(int sock, char* line2) {
 
 		line = strtok(serverMessage, "\n");
 	}
-
+	
 	strcpy(line2, line);
 }
 
@@ -102,7 +100,6 @@ int getSock(struct config configS) {
 	}
 	return sock;
 }
-
 /**
  * Kommunikation mit dem Server
  *
@@ -135,12 +132,9 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 	int spielfeldID;
 	int shmSizefeld;
 
-
-
 	sock = getSock(configstruct);
 
 	while (1) {
-
 		// Empfange Nachricht von Server
 		getLine(sock, line);
 
@@ -153,18 +147,15 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 
 			return EXIT_FAILURE;
 		}
-
 		// Servernachricht verarbeiten
 		// Switch zwischen positiver/negativer Server Antwort
 		switch (line[0]) {
-
 			// positive Antwort
 			case '+':
 
 				if (phase == 0) {
 
 					/* Protokollphase Prolog */
-
 					if (strstr(line, "+ MNM Gameserver") != 0) {
 
 						// sende  Protocol Version
@@ -216,7 +207,6 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 
 							fprintf(stderr, "\nFehler beim Erfassen der Spielernummer: Spielernummer < 0\n");
 							return EXIT_FAILURE;
-
 						}
 
 						shm->spieleratt[shm->eigspielernummer].spielernummer = shm->eigspielernummer;	
@@ -258,7 +248,6 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 						shm->spieleratt[temp2].regflag = temp3;
 
 					} else if (strstr(line, "+ ENDPLAYERS") != 0) {
-
 						// setze Flag für Spielverlaufsphase
 						phase = 1;
 
@@ -267,7 +256,6 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 				} else if (phase == 1) {
 
 					/* Spielverlaufsphase */
-
 					if (strstr(line, "+ WAIT") != 0) {
 
 						// sende "OKWAIT"
@@ -325,7 +313,6 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 
 							shm->spielfeldID = spielfeldID;
 							shmflag = 1;
-							
 						}
 						
 						spielfeldleeren(spielfeld);
@@ -357,6 +344,7 @@ int performConnection(char* version, char* game_id, SharedMem *shm, int pipeRead
 						// Sende Signal SIGUSR1 an Thinker
 						kill(getppid(), SIGUSR1);
 
+						// Warten auf shm->think_flag = 1
 						while (shm->think_flag == 1) {}
 
 						if (shm->think_flag == 0){
