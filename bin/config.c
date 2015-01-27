@@ -41,5 +41,4 @@ struct config get_config(char *filename) {
 
 	fclose(file);
 	return configstruct;
-
 }
